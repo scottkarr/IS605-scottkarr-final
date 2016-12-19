@@ -1,0 +1,775 @@
+---
+title: "DATA 605 Final Project"
+author: "Scott Karr"
+date: "Dec 23, 2016"
+output: html_document
+---
+
+```{r,eval=TRUE,include=FALSE}
+setwd("~/IS605Fall2016/Project")
+library(alr3)
+library(bestglm)
+library(car)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(knitr)
+library(psych)
+library(reshape2)
+library(scales)
+library(MASS)
+```
+
+```{r, eval=TRUE, include=FALSE}
+url <- "~/IS605Fall2016/Project/train.csv"
+AmesHomes <- read.csv(url, stringsAsFactors = FALSE)
+attach(AmesHomes)
+des <- describeBy(AmesHomes)[,-c(6,7)]
+print(des, digits=0)
+```
+
+#### Setup
+Pick one of the quanititative independent variables from the training data set (train.csv) , and define that 
+variable as  X.   Make sure this variable is skewed to the right!  Pick the dependent variable and define it 
+as  Y. 
+
+#### Probability.  
+```{r, distributions, eval=TRUE}
+X <- AmesHomes$GrLivArea
+Y <- AmesHomes$SalePrice
+
+par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,2))
+hist(AmesHomes$GrLivArea,breaks=25, main='X')
+hist(AmesHomes$SalePrice,breaks=50, main='Y')
+```
+
+```{r, probabilities, eval=TRUE}
+#"x" is 3d quartile of X variable
+#"y" is 2d quartile of X variable
+quantile(X)
+quantile(Y)
+```
+
+Q.  Calculate as a minimum the below probabilities a through c. 
+
+    Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is 
+    estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.
+
+A.  Gross Living Area is not independent of Sales Price.  What is the conditional probability of GLA being greater
+    than 1776.75 sq ft given the sales price is greater than $163,000. 
+
+    a.  P(X > .75  | Y > .50)  
+        P(A) = P(X > .75) = .25  
+        P(B) = P(Y > .50) = .50  
+        P(A|B) = P(B and A) / P(B)  
+               = (.50 * .25 / .50)  
+               = .50  
+    
+-   Gross Living Area is not independent of Sales Price.  What is the joint probability of GLA being greater
+    than 1776.75 sq ft and the sales price is greater than $163,000.
+               
+    b.  P(X > .75, Y > .50)  
+        P(A) = P(X > .75) = .25  
+        P(B) = P(Y > .50) = .50  
+        P(A,B) = P(A) + P(B)  
+               = (.25 + .50)  
+               =  .75  
+    
+-   Gross Living Area is not independent of Sales Price.  What is the conditional probability of GLA being greater
+    than 1776.75 sq ft given the sales price is greater than $163,000. 
+    
+    c.  P(X < .75 | Y > .50)  
+        P(A) = P(X < .75) = .75  
+        P(B) = P(Y > .50) = .50                                      
+        P(A|B) = P(B and A) / P(B)  
+               = (.50 * .75 / .50)  
+               = .75  
+
+Q.  Does splitting the training data in this fashion make them independent? 
+
+A.  No, independence describes whether there is a relation between X & Y.  Splitting the data doesn't
+    change the relationship, it just changes the extent of problem domain.
+
+
+```{r, counts, eval=TRUE}
+count(subset(AmesHomes, ( X <= 1776.75 & Y <= 163000)))
+count(subset(AmesHomes, ( X <= 1776.75 & Y > 163000)))
+count(subset(AmesHomes, ( X > 1776.75 & Y <= 163000)))
+count(subset(AmesHomes, ( X > 1776.75 & Y > 163000)))
+```
+
+Q.  In addition, make a table of counts as shown below.
+    Let A be the new variable counting those observations above the 3d quartile for X, and let B be the 
+    new variable counting those observations above the 2d quartile for Y.
+
+A.  TABLE OF OBSERVATION COUNTS:
+                                        Y
+                      
+      |                | <=2nd quartile  | > 2nd quartile  | Total |
+      |----------------|-----------------|-----------------|-------|
+  X   |<= 3rd quartile |       682       |        413      | 1095  |
+      | > 3rd quartile |        50       |        315      |  365  |
+      |   Total        |       732       |        728      | 1460  |
+
+A + B represents 682 observations.
+
+Q.  Does P(A|B)=P(A)P(B)? No  Check mathematically, and then 
+
+A.  P(A|B) = P(B and A) / P(B)
+           = (P(B) * P(A))/P(B)
+    P(A) = 365/1460 = .25
+    P(B) = 728/1460 = .50
+           = (.50 * .25)/.50
+           = .25
+           
+    P(A) * P(B) = .25 * .5 = .125
+
+Q.  Evaluate by running a Chi Square test for association.
+
+A.  
+```{r, chi-squared-test, eval=TRUE}
+#Provides strong evidence to suggest that X and Y have a dependent or have some association.
+chisq.test(matrix(c(682,413,50,315), ncol=2))
+```
+
+#### Descriptive and Inferential Statistics
+Q.  Provide univariate descriptive statistics and appropriate plots for the training data set.
+
+A.
+#Descriptive Statistics 
+
+|    vars        |id |  n	 | mean  |   sd	 | median | min |  max  | range |skew|kurtosis| se  |
+|----------------|--:|----:|------:|------:|-------:|----:|------:|------:|---:|--------|----:|
+| MSSubClass     | 2 |1460 |    57 |    42 |     50 |  20 |   190 |   170 |  1 |       2|    1|
+| LotFrontage    | 4 |1201 |    70 |    24 |     69 |  21 |   313 |   292 |  2 |      17|    1|
+| LotArea        | 5 |1460 | 10517 |  9981 |   9478 |1300 |215245 |213945 | 12 |     202|  261|
+| OverallQual    |18 |1460 |     6 |     1 |      6 |   1 |    10 |     9 |  0 |       0|    0|
+| OverallCond    |19 |1460 |     6 |     1 |      5 |   1 |     9 |     8 |  1 |       1|    0|
+| YearBuilt      |20 |1460 |  1971 |    30 |   1973 |1872 |  2010 |   138 | -1 |       0|    1|
+| YearRemodAdd   |21 |1460 |  1985 |    21 |   1994 |1950 |  2010 |    60 | -1 |      -1|    1|
+| MasVnrArea     |27 |1452 |   104 |   181 |      0 |   0 |  1600 |  1600 |  3 |      10|    5|
+| BsmtFinSF1     |35 |1460 |   444 |   456 |    384 |   0 |  5644 |  5644 |  2 |      11|   12|
+| BsmtFinSF2     |37 |1460 |    47 |   161 |      0 |   0 |  1474 |  1474 |  4 |      20|    4|
+| BsmtUnfSF      |38 |1460 |   567 |   442 |    478 |   0 |  2336 |  2336 |  1 |       0|   12|
+| TotalBsmtSF    |39 |1460 |  1057 |   439 |    992 |   0 |  6110 |  6110 |  2 |      13|   11|
+| X1stFlrSF      |44 |1460 |  1163 |   387 |   1087 | 334 |  4692 |  4358 |  1 |       6|   10|
+| X2ndFlrSF      |45 |1460 |   347 |   437 |      0 |   0 |  2065 |  2065 |  1 |      -1|   11|
+|-LowQualFinSF   |46 |1460 |     6 |    49 |      0 |   0 |   572 |   572 |  9 |      83|    1|
+| GrLivArea      |47 |1460 |  1515 |   525 |   1464 | 334 |  5642 |  5308 |  1 |       5|   14|
+| BsmtFullBath   |48 |1460 |     0 |     1 |      0 |   0 |     3 |     3 |  1 |      -1|    0|
+| BsmtHalfBath   |49 |1460 |     0 |     0 |      0 |   0 |     2 |     2 |  4 |      16|    0|
+| FullBath       |50 |1460 |     2 |     1 |      2 |   0 |     3 |     3 |  0 |      -1|    0|
+| HalfBath       |51 |1460 |     0 |     1 |      0 |   0 |     2 |     2 |  1 |      -1|    0|
+| BedroomAbvGr   |52 |1460 |     3 |     1 |      3 |   0 |     8 |     8 |  0 |       2|    0|
+| KitchenAbvGr   |53 |1460 |     1 |     0 |      1 |   0 |     3 |     3 |  4 |      21|    0|
+| TotRmsAbvGrd   |55 |1460 |     7 |     2 |      6 |   2 |    14 |    12 |  1 |       1|    0|
+| Fireplaces     |57 |1460 |     1 |     1 |      1 |   0 |     3 |     3 |  1 |       0|    0|
+| GarageYrBlt    |60 |1379 |  1979 |    25 |   1980 |1900 |  2010 |   110 | -1 |       0|    1|
+|-GarageCars     |62 |1460 |     2 |     1 |      2 |   0 |     4 |     4 |  0 |       0|    0|
+| GarageArea     |63 |1460 |   473 |   214 |    480 |   0 |  1418 |  1418 |  0 |       1|    6|
+| WoodDeckSF     |67 |1460 |    94 |   125 |      0 |   0 |   857 |   857 |  2 |       3|    3|
+| OpenPorchSF    |68 |1460 |    47 |    66 |     25 |   0 |   547 |   547 |  2 |       8|    2|
+| EnclosedPorch  |69 |1460 |    22 |    61 |      0 |   0 |   552 |   552 |  3 |      10|    2|
+| X3SsnPorch     |70 |1460 |     3 |    29 |      0 |   0 |   508 |   508 | 10 |     123|    1|
+| ScreenPorch    |71 |1460 |    15 |    56 |      0 |   0 |   480 |   480 |  4 |      18|    1|
+| PoolArea       |72 |1460 |     3 |    40 |      0 |   0 |   738 |   738 | 15 |     222|    1|
+| MiscVal        |76 |1460 |    43 |   496 |      0 |   0 | 15500 | 15500 | 24 |     698|   13|
+| MoSold         |77 |1460 |     6 |     3 |      6 |   1 |    12 |    11 |  0 |       0|    0|
+| YrSold         |78 |1460 |  2008 |     1 |   2008 |2006 |  2010 |     4 |  0 |      -1|    0|
+| SalePrice      |81 |1460 |180921 | 79443 | 163000 |4900 |755000 |720100 |  2 |       6| 2079|
+
+
+#Prep for plots
+```{r, data-adjustments, include=FALSE}
+# imput 81 GarageYrBlt nulls with YearBuilt
+AmesHomes$GarageYrBlt[is.na(AmesHomes$GarageYrBlt)] <- AmesHomes$YearBuilt[is.na(AmesHomes$GarageYrBlt)] 
+
+# impute LotFrontage nulls with 0
+AmesHomes$LotFrontage[is.na(AmesHomes$LotFrontage)] <- 0
+
+# impute MasVnrArea with 0
+AmesHomes$MasVnrArea[is.na(AmesHomes$MasVnrArea)] <- 0
+
+# imput 1369 nulls for Alley with 'None'
+AmesHomes$Alley[is.na(AmesHomes$Alley)] <- 'None'
+
+# impute 8 nulls for MasVnrType with 'None'
+AmesHomes$MasVnrType[is.na(AmesHomes$MasVnrType)] <- 'None'
+
+# impute 37 nulls for BsmtQual with 'None'
+AmesHomes$BsmtQual[is.na(AmesHomes$BsmtQual)] <- 'None'
+
+# impute 37 nulls for BsmtCond with 'None'
+AmesHomes$BsmtCond[is.na(AmesHomes$BsmtCond)] <- 'Xa'
+
+# impute 37 nulls for BsmtExposure with 'None'
+AmesHomes$BsmtExposure[is.na(AmesHomes$BsmtExposure)] <- 'Xb'
+
+# impute 37 nulls for BsmtFinType1 with 'None'
+AmesHomes$BsmtFinType1[is.na(AmesHomes$BsmtFinType1)] <- 'Xc'
+
+# impute 38 nulls for BsmtFinType2 with 'None'
+AmesHomes$BsmtFinType2[is.na(AmesHomes$BsmtFinType2)] <- 'Xd'
+
+# impute 81 nulls for GarageTypewith 'None'
+AmesHomes$GarageType [is.na(AmesHomes$GarageType )] <- 'Xe'
+
+# impute 81 nulls for GarageFinish with 'None'
+AmesHomes$GarageFinish[is.na(AmesHomes$GarageFinish)] <- 'Xf'
+
+# impute 81 nulls for GarageQual with 'None'
+AmesHomes$GarageQual[is.na(AmesHomes$GarageQual)] <- 'Xg'
+
+# impute 81 nulls for GarageCond with 'None'
+AmesHomes$GarageCond[is.na(AmesHomes$GarageCond)] <- 'Xh'
+
+# impute 1 null for Electrical with 'None'
+AmesHomes$Electrical[is.na(AmesHomes$Electrical)] <- 'None'
+
+# impute 690 nulls for FireplaceQu with 'None'
+AmesHomes$FireplaceQu[is.na(AmesHomes$FireplaceQu)] <- 'None'
+
+# impute 1453 nulls for PoolQC with 'None'
+AmesHomes$PoolQC[is.na(AmesHomes$PoolQC)] <- 'None'
+
+# impute 1179 nulls for Fence with 'None'
+AmesHomes$Fence[is.na(AmesHomes$Fence)] <- 'None'
+
+# impute 1406 nulls for MiscFeature with 'None
+AmesHomes$MiscFeature[is.na(AmesHomes$MiscFeature)] <- 'None'
+
+# impute 5 nulls for MSZoning with 'None'
+AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'None'
+
+# impute 2 nulls for Utilities with 'None'
+AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
+
+# impute 2 nulls for Functional with 'None'
+AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+
+# impute 2 nulls for BsmtFullBath with 'None'
+AmesHomes$BsmtFullBath[is.na(AmesHomes$BsmtFullBath)] <- 0
+
+# impute 2 nulls for BsmtHalfBath with 'None'
+AmesHomes$BsmtHalfBath[is.na(AmesHomes$BsmtHalfBath)] <- 0
+
+# impute 1 nulls for Exterior1st with 'None'
+AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
+
+# impute 1 nulls for Exterior2nd with 'None'
+AmesHomes$Exterior1st[is.na(AmesHomes$Exterior1st)] <- 'None'
+
+# impute 1 nulls for Utilities with 'None'
+AmesHomes$Exterior2nd[is.na(AmesHomes$Exterior2nd)] <- 'None'
+
+# impute 1 nulls for Functional with 'None'
+AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+
+# impute 1 nulls for BsmtFinSF1 with 'None'
+AmesHomes$BsmtFinSF1[is.na(AmesHomes$BsmtFinSF1)] <- 0
+
+# impute 1 nulls for BsmtFinSF2 with 'None'
+AmesHomes$BsmtFinSF2[is.na(AmesHomes$BsmtFinSF2)] <- 0
+
+# impute 1 nulls for BsmtUnfSF with 'None'
+AmesHomes$BsmtUnfSF[is.na(AmesHomes$BsmtUnfSF)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes$TotalBsmtSF[is.na(AmesHomes$TotalBsmtSF)] <- 0
+
+# impute 1 nulls for GarageCars with 'None'
+AmesHomes$GarageCars[is.na(AmesHomes$GarageCars)] <- 0
+
+# impute 1 nulls for GarageArea with 'None'
+AmesHomes$GarageArea[is.na(AmesHomes$GarageArea)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes$SaleType[is.na(AmesHomes$SaleType)] <- 'None'
+# Show Descriptive Statistics
+# des <- describeBy(AmesHomes)[,-c(6,7)]
+# print(des, digits=0)
+
+#describeData(AmesHomes)
+```
+
+#barplots for categorical data
+```{r, eval=TRUE, echo=FALSE}
+op <- par(oma=c(5,7,1,1))
+par(3,5)
+
+g03 <- ggplot(AmesHomes, aes(x = MSZoning)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Zoning Proportions")
+AmesHomes$MSZoning <- factor(AmesHomes$MSZoning)
+
+g06 <- ggplot(AmesHomes, aes(x = Street)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Street Proportions") 
+AmesHomes$Street <- factor(AmesHomes$Street) 
+
+g07 <- ggplot(AmesHomes, aes(x = Alley)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Alley Proportions")
+AmesHomes$Alley <- factor(AmesHomes$Alley)
+
+g08 <- ggplot(AmesHomes, aes(x = LotShape)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotShape Proportions")
+AmesHomes$LotShape <- factor(AmesHomes$LotShape)
+
+g09 <- ggplot(AmesHomes, aes(x = LandContour)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandContour Proportions")
+AmesHomes$LandContour <- factor(AmesHomes$LandContour)
+
+g10 <- ggplot(AmesHomes, aes(x = Utilities)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Utilities Proportions")
+AmesHomes$Utilities <- factor(AmesHomes$Utilities)
+
+g11 <- ggplot(AmesHomes, aes(x = LotConfig)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotConfig Proportions")
+AmesHomes$LotConfig <- factor(AmesHomes$LotConfig)
+
+g12 <- ggplot(AmesHomes, aes(x = LandSlope)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandSlope Proportions")
+AmesHomes$LandSlope <- factor(AmesHomes$LandSlope)
+
+g13 <- ggplot(AmesHomes, aes(x = Neighborhood)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Neighborhood Proportions")
+AmesHomes$Neighborhood <- factor(AmesHomes$Neighborhood)
+
+g14 <- ggplot(AmesHomes, aes(x = Condition1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition1 Proportions")
+AmesHomes$Condition1 <- factor(AmesHomes$Condition1)
+
+g15 <- ggplot(AmesHomes, aes(x = Condition2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition2 Proportions")
+AmesHomes$Condition2 <- factor(AmesHomes$Condition2)
+
+g16 <- ggplot(AmesHomes, aes(x = BldgType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BldgType Proportions")
+AmesHomes$BldgType <- factor(AmesHomes$BldgType)
+
+g17 <- ggplot(AmesHomes, aes(x = HouseStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HouseStyle Proportions")
+AmesHomes$HouseStyle <- factor(AmesHomes$HouseStyle)
+
+g22 <- ggplot(AmesHomes, aes(x = RoofStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("RoofStyle Proportions")
+AmesHomes$RoofStyle <- factor(AmesHomes$RoofStyle)
+
+g23 <- ggplot(AmesHomes, aes(x = RoofMatl)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("RoofMatl Proportions")
+AmesHomes$RoofMatl <- factor(AmesHomes$RoofMatl)
+
+g24 <- ggplot(AmesHomes, aes(x = Exterior1st)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Exterior1st Proportions")
+AmesHomes$Exterior1st <- factor(AmesHomes$Exterior1st)
+
+g25 <- ggplot(AmesHomes, aes(x = Exterior2nd)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Exterior2nd Proportions")
+AmesHomes$Exterior2nd <- factor(AmesHomes$Exterior2nd)
+
+g26 <- ggplot(AmesHomes, aes(x = MasVnrType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MasVnrType Proportions")
+AmesHomes$MasVnrType <- factor(AmesHomes$MasVnrType)
+
+g28 <- ggplot(AmesHomes, aes(x = ExterQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterQual Proportions")
+AmesHomes$ExterQual <- factor(AmesHomes$ExterQual)
+
+g29 <- ggplot(AmesHomes, aes(x = ExterCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterCond Proportions")
+AmesHomes$ExterCond <- factor(AmesHomes$ExterCond)
+
+g30 <- ggplot(AmesHomes, aes(x = Foundation)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Foundation Proportions")
+AmesHomes$Foundation <- factor(AmesHomes$Foundation)
+
+g31 <- ggplot(AmesHomes, aes(x = BsmtQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtQual Proportions")
+AmesHomes$BsmtQual <- factor(AmesHomes$BsmtQual)
+
+g32 <- ggplot(AmesHomes, aes(x = BsmtCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtCond Proportions")
+AmesHomes$BsmtCond <- factor(AmesHomes$BsmtCond)
+
+g33 <- ggplot(AmesHomes, aes(x = BsmtExposure)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtExposure Proportions")
+AmesHomes$BsmtExposure <- factor(AmesHomes$BsmtExposure)
+
+g34 <- ggplot(AmesHomes, aes(x = BsmtFinType1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType1 Proportions")
+AmesHomes$BsmtFinType1 <- factor(AmesHomes$BsmtFinType1)
+
+g36 <- ggplot(AmesHomes, aes(x = BsmtFinType2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType2 Proportions")
+AmesHomes$BsmtFinType2 <- factor(AmesHomes$BsmtFinType2)
+
+g40 <- ggplot(AmesHomes, aes(x = Heating)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Heating Proportions")
+AmesHomes$Heating <- factor(AmesHomes$Heating)
+
+g41 <- ggplot(AmesHomes, aes(x = HeatingQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HeatingQC Proportions")
+AmesHomes$HeatingQC <- factor(AmesHomes$HeatingQC)
+
+g42 <- ggplot(AmesHomes, aes(x = CentralAir)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("CentralAir Proportions")
+AmesHomes$CentralAir <- factor(AmesHomes$CentralAir)
+
+g43 <- ggplot(AmesHomes, aes(x = Electrical)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Electrical Proportions")
+AmesHomes$Electrical <- factor(AmesHomes$Electrical)
+
+g54 <- ggplot(AmesHomes, aes(x = KitchenQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("KitchenQual Proportions")
+AmesHomes$KitchenQual <- factor(AmesHomes$KitchenQual)
+
+g56 <- ggplot(AmesHomes, aes(x = Functional)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Functional Proportions")
+AmesHomes$Functional <- factor(AmesHomes$Functional)
+
+g58 <- ggplot(AmesHomes, aes(x = FireplaceQu)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("FireplaceQu Proportions")
+AmesHomes$FireplaceQu <- factor(AmesHomes$FireplaceQu)
+
+g59 <- ggplot(AmesHomes, aes(x = GarageType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageType Proportions")
+AmesHomes$GarageType <- factor(AmesHomes$GarageType)
+
+g61 <- ggplot(AmesHomes, aes(x = GarageFinish)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageFinish Proportions")
+AmesHomes$GarageFinish <- factor(AmesHomes$GarageFinish)
+
+g64 <- ggplot(AmesHomes, aes(x = GarageQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageQual Proportions")
+AmesHomes$GarageQual <- factor(AmesHomes$GarageQual)
+
+g65 <- ggplot(AmesHomes, aes(x = GarageCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageCond Proportions")
+AmesHomes$GarageCond <- factor(AmesHomes$GarageCond)
+
+g66 <- ggplot(AmesHomes, aes(x = PavedDrive)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PavedDrive Proportions")
+AmesHomes$PavedDrive <- factor(AmesHomes$PavedDrive)
+
+g73 <- ggplot(AmesHomes, aes(x = PoolQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PoolQC Proportions")
+AmesHomes$PoolQC <- factor(AmesHomes$PoolQC)
+
+g74 <- ggplot(AmesHomes, aes(x = Fence)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Fence Proportions")
+AmesHomes$Fence <- factor(AmesHomes$Fence)
+
+g75 <- ggplot(AmesHomes, aes(x = MiscFeature)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MiscFeature Proportions")
+AmesHomes$MiscFeature <- factor(AmesHomes$MiscFeature)
+
+g79 <- ggplot(AmesHomes, aes(x = SaleType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleType Proportions")
+AmesHomes$SaleType <- factor(AmesHomes$SaleType)
+
+g80 <- ggplot(AmesHomes, aes(x = SaleCondition)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleCondition Proportions")
+AmesHomes$SaleCondition <- factor(AmesHomes$SaleCondition)
+
+grid.arrange(
+  g03,g06,g07,g08,g09,g10,g11,g12,g13,
+  g14,g15,g16,g17,g22,g23,g24,g25,g26,
+  g28,g29
+)
+
+grid.arrange(
+  g30,g31,g32,g33,g34,g36,g40,g41,g42,
+  g43,g54,g56,g58,g59,g61,g64,g65,g66,
+  g73,g74,g75,g79,g80
+)  
+```
+
+#histograms for ordinal data
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+#####################################################################
+# Make small histograms for each variable
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#AmesHomes.02 <- AmesHomes
+hist(AmesHomes$MSSubClass, breaks = 100, col = 'yellow')
+
+#AmesHomes.04 <- AmesHomes
+hist(AmesHomes$LotFrontage, breaks = 100, col = 'yellow')
+
+#AmesHomes.05 <- AmesHomes
+hist(AmesHomes$LotArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.18 <- AmesHomes
+hist(AmesHomes$OverallQual, breaks = 100, col = 'yellow')
+
+#AmesHomes.19 <- AmesHomes
+hist(AmesHomes$OverallCond, breaks = 100, col = 'yellow')
+
+#AmesHomes.20 <- AmesHomes
+hist(AmesHomes$YearBuilt, breaks = 100, col = 'yellow')
+
+#AmesHomes.21 <- AmesHomes
+hist(AmesHomes$YearRemodAdd, breaks = 100, col = 'yellow')
+
+#AmesHomes.27 <- AmesHomes
+hist(AmesHomes$MasVnrArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.35 <- AmesHomes
+hist(AmesHomes$BsmtFinSF1, breaks = 100, col = 'yellow')
+
+#AmesHomes.37 <- AmesHomes
+hist(AmesHomes$BsmtFinSF2, breaks = 100, col = 'yellow')
+
+#AmesHomes.38 <- AmesHomes
+hist(AmesHomes$BsmtUnfSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.39 <- AmesHomes
+hist(AmesHomes$TotalBsmtSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.44 <- AmesHomes
+hist(AmesHomes$X1stFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.45 <- AmesHomes
+hist(AmesHomes$X2ndFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.46 <- AmesHomes
+hist(AmesHomes$LowQualFinSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.47 <- AmesHomes
+hist(AmesHomes$GrLivArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.48 <- AmesHomes
+hist(AmesHomes$BsmtFullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.49 <- AmesHomes
+hist(AmesHomes$BsmtHalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.50 <- AmesHomes
+hist(AmesHomes$FullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.51 <- AmesHomes
+hist(AmesHomes$HalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.52 <- AmesHomes
+hist(AmesHomes$BedroomAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.53 <- AmesHomes
+hist(AmesHomes$KitchenAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.55 <- AmesHomes
+hist(AmesHomes$TotRmsAbvGrd, breaks = 100, col = 'yellow')
+
+#AmesHomes.57 <- AmesHomes
+hist(AmesHomes$Fireplaces, breaks = 100, col = 'yellow')
+
+#AmesHomes.60 <- AmesHomes
+hist(AmesHomes$GarageYrBlt, breaks = 100, col = 'yellow')
+
+#AmesHomes.62 <- AmesHomes
+hist(AmesHomes$GarageCars, breaks = 100, col = 'yellow')
+
+#AmesHomes.63 <- AmesHomes
+hist(AmesHomes$GarageArea, breaks = 100, col = 'yellow')
+
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#AmesHomes.67 <- AmesHomes
+hist(AmesHomes$WoodDeckSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.68 <- AmesHomes
+hist(AmesHomes$OpenPorchSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.69 <- AmesHomes
+hist(AmesHomes$EnclosedPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.70 <- AmesHomes
+hist(AmesHomes$X3SsnPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.71 <- AmesHomes
+hist(AmesHomes$ScreenPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.72 <- AmesHomes
+hist(AmesHomes$PoolArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.76 <- AmesHomes
+hist(AmesHomes$MiscVal, breaks = 100, col = 'yellow')
+
+#AmesHomes.77 <- AmesHomes
+hist(AmesHomes$MoSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.78 <- AmesHomes
+hist(AmesHomes$YrSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.81 <- AmesHomes
+hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
+```
+
+Q.  Provide a scatterplot of X and Y.
+
+A.
+```{r, scatterplot, eval=TRUE}
+plot(X,Y)
+```
+
+Provide a 95% CI for the difference in the mean of the variables.  
+
+
+Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your analysis.
+
+Q.  Provide a 95% CI for the difference in the mean of the variables.  
+
+A.  If 100 sample distibutions are taken from the population, 95 of them 
+    are likely to have prices within the confidence interval -183465.0 -175346.4
+```{r,CI, eval=TRUE}
+t1 <- t.test( X, Y, paired = TRUE, conf.level = 0.95)
+t1
+```
+
+Q.  Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the       correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your        analysis.
+
+
+A.  If 100 sample distibutions are taken from the population, 99 of them 
+    are likely to have correlations within the confidence interval 0.6733974 0.7406408
+```{r, correlation, eval=TRUE}
+c <- cor(X,Y)
+c
+r.test(1460,cor(X,Y),0)
+cor.test(X,Y,conf.level = 0.99)
+```
+
+####Linear Algebra and Correlation
+Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) 
+
+Q.  Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the   
+    correlation matrix. 
+
+A.
+```{r, precision, eval=TRUE}
+#invert the correlation for precision
+p <- solve(c) %*% c
+p
+#precision * correlation
+p %*% c
+#correlation * precision
+c %*% p
+```
+
+Q.  Conduct     principle components analysis (research this!)  and interpret.  Discuss.
+
+A.  
+```{r, PCA, eval=TRUE}
+par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,2))
+# Pricipal Components Analysis
+# entering raw data and extracting PCs 
+# from the correlation matrix 
+mydata <- data.frame(X,Y)
+fit <- princomp(mydata, cor=TRUE)
+summary(fit) # print variance accounted for 
+loadings(fit) # pc loadings 
+plot(fit,type="lines") # scree plot 
+fit$scores # the principal components
+biplot(fit)
+```
+####Calculus-Based Probability & Statistics.  
+
+Many times, it makes sense to fit a closed form distribution to data.  
+
+Q.  For your variable that is skewed to the right, shift it so that the minimum value is above zero.  Then load the     MASS package and run fitdistr to fit an exponential probability density function.  
+    (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ).
+
+A.  
+```{r, fitdistr, eval=TRUE}
+f <- fitdistr(X, "exponential")
+library(fitdistrplus)
+#plotdist(X,"norm",para=list(mean=f$estimate[1],sd=f$estimate[2]))
+```
+## https://rstudio-pubs-static.s3.amazonaws.com/26693_e1151035722942b2813c0063c6b220ae.html
+Find the optimal value of  for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, )). 
+
+Plot a histogram and compare it with a histogram of your original variable.   Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).   
+
+Also generate a 95% confidence interval from the empirical data, assuming normality.  Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
