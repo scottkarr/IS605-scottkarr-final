@@ -1,0 +1,1353 @@
+---
+title: 'DATA 605 Final Project'
+author: "Scott Karr"
+date: "Dec 23, 2016"
+output: 
+  html_document: 
+    theme: cerulean
+---
+
+```{r, eval=TRUE, echo=FALSE, include=FALSE}
+setwd("~/IS605Fall2016/Project")
+library(alr3)
+library(bestglm)
+library(car)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(knitr)
+library(psych)
+library(reshape2)
+library(scales)
+library(MASS)
+```
+
+
+__--------------------------------------------------------------------------------------------------------------------------__
+
+# Part 1: Data Exploration
+
+####Data Summary 
+
+```{r, fig.width = 9, fig.height = 7, include = FALSE}
+#url <- "~/IS605Fall2016/Project/train.csv"
+url <- "https://raw.githubusercontent.com/scottkarr/IS605-scottkarr-final/5ca63dde10742356eff5c21dfbc9132f5aac73c4/train.csv"
+AmesHomes <- read.csv(url, stringsAsFactors = FALSE)
+attach(AmesHomes)
+```
+
+The data set we are exploring focuses on the binomial success or failure of whether the crime rate is above (1) or below (0) the median for a particular neighborhood.  There are 466 rows of data, each representing neighborhoods located in the Boston metropolitan area. For each neighborhood we are provided with 13 attributes that could potentially be used as predictor variables and one response variable ("target") that indicates whether or not the neighborhood does, in fact, have an above-median crime rate.  Our assignment is to try to predict whether or not a neighborhood would be more likely to a have an above-mian crime rate based on the 13 attributes provided in the data set.  A summary table for the data set is provided below.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+__--------------------------------------------------------------------------------------------------------------------------__
+
+# Part 2: Data Cleaning
+
+```{r, data-adjustments, include=FALSE}
+# imput 81 GarageYrBlt nulls with YearBuilt
+AmesHomes$GarageYrBlt[is.na(AmesHomes$GarageYrBlt)] <- AmesHomes$YearBuilt[is.na(AmesHomes$GarageYrBlt)] 
+
+# impute LotFrontage nulls with 0
+AmesHomes$LotFrontage[is.na(AmesHomes$LotFrontage)] <- 0
+
+# impute MasVnrArea with 0
+AmesHomes$MasVnrArea[is.na(AmesHomes$MasVnrArea)] <- 0
+
+# imput 1369 nulls for Alley with 'None'
+AmesHomes$Alley[is.na(AmesHomes$Alley)] <- 'None'
+
+# impute 8 nulls for MasVnrType with 'None'
+AmesHomes$MasVnrType[is.na(AmesHomes$MasVnrType)] <- 'None'
+
+# impute 37 nulls for BsmtQual with 'None'
+AmesHomes$BsmtQual[is.na(AmesHomes$BsmtQual)] <- 'None'
+
+# impute 37 nulls for BsmtCond with 'None'
+AmesHomes$BsmtCond[is.na(AmesHomes$BsmtCond)] <- 'Xa'
+
+# impute 37 nulls for BsmtExposure with 'None'
+AmesHomes$BsmtExposure[is.na(AmesHomes$BsmtExposure)] <- 'Xb'
+
+# impute 37 nulls for BsmtFinType1 with 'None'
+AmesHomes$BsmtFinType1[is.na(AmesHomes$BsmtFinType1)] <- 'Xc'
+
+# impute 38 nulls for BsmtFinType2 with 'None'
+AmesHomes$BsmtFinType2[is.na(AmesHomes$BsmtFinType2)] <- 'Xd'
+
+# impute 81 nulls for GarageTypewith 'None'
+AmesHomes$GarageType [is.na(AmesHomes$GarageType )] <- 'Xe'
+
+# impute 81 nulls for GarageFinish with 'None'
+AmesHomes$GarageFinish[is.na(AmesHomes$GarageFinish)] <- 'Xf'
+
+# impute 81 nulls for GarageQual with 'None'
+AmesHomes$GarageQual[is.na(AmesHomes$GarageQual)] <- 'Xg'
+
+# impute 81 nulls for GarageCond with 'None'
+AmesHomes$GarageCond[is.na(AmesHomes$GarageCond)] <- 'Xh'
+
+# impute 1 null for Electrical with 'None'
+AmesHomes$Electrical[is.na(AmesHomes$Electrical)] <- 'None'
+
+# impute 690 nulls for FireplaceQu with 'None'
+AmesHomes$FireplaceQu[is.na(AmesHomes$FireplaceQu)] <- 'None'
+
+# impute 1453 nulls for PoolQC with 'None'
+AmesHomes$PoolQC[is.na(AmesHomes$PoolQC)] <- 'None'
+
+# impute 1179 nulls for Fence with 'None'
+AmesHomes$Fence[is.na(AmesHomes$Fence)] <- 'None'
+
+# impute 1406 nulls for MiscFeature with 'None
+AmesHomes$MiscFeature[is.na(AmesHomes$MiscFeature)] <- 'None'
+
+# impute 5 nulls for MSZoning with 'None'
+AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'None'
+
+# impute 2 nulls for Utilities with 'None'
+AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
+
+# impute 2 nulls for Functional with 'None'
+AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+
+# impute 2 nulls for BsmtFullBath with 'None'
+AmesHomes$BsmtFullBath[is.na(AmesHomes$BsmtFullBath)] <- 0
+
+# impute 2 nulls for BsmtHalfBath with 'None'
+AmesHomes$BsmtHalfBath[is.na(AmesHomes$BsmtHalfBath)] <- 0
+
+# impute 1 nulls for Exterior1st with 'None'
+AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
+
+# impute 1 nulls for Exterior2nd with 'None'
+AmesHomes$Exterior1st[is.na(AmesHomes$Exterior1st)] <- 'None'
+
+# impute 1 nulls for Utilities with 'None'
+AmesHomes$Exterior2nd[is.na(AmesHomes$Exterior2nd)] <- 'None'
+
+# impute 1 nulls for Functional with 'None'
+AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+
+# impute 1 nulls for BsmtFinSF1 with 'None'
+AmesHomes$BsmtFinSF1[is.na(AmesHomes$BsmtFinSF1)] <- 0
+
+# impute 1 nulls for BsmtFinSF2 with 'None'
+AmesHomes$BsmtFinSF2[is.na(AmesHomes$BsmtFinSF2)] <- 0
+
+# impute 1 nulls for BsmtUnfSF with 'None'
+AmesHomes$BsmtUnfSF[is.na(AmesHomes$BsmtUnfSF)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes$TotalBsmtSF[is.na(AmesHomes$TotalBsmtSF)] <- 0
+
+# impute 1 nulls for GarageCars with 'None'
+AmesHomes$GarageCars[is.na(AmesHomes$GarageCars)] <- 0
+
+# impute 1 nulls for GarageArea with 'None'
+AmesHomes$GarageArea[is.na(AmesHomes$GarageArea)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes$SaleType[is.na(AmesHomes$SaleType)] <- 'None'
+# Show Descriptive Statistics
+# des <- describeBy(AmesHomes)[,-c(6,7)]
+# print(des, digits=0)
+
+#describeData(AmesHomes)
+```
+
+#### Ordinal Imputations
+LotFrontage(4) 259, GarageYrBlt(60) 81, MasVnrArea(27) 8
+
+#### Factor Imputations
+Electrical(43) 1459, MasVnrType(26) 1452, BsmtQual(31) 1423, BsmtCond(32) 1423, BsmtFinType1(34) 1423, BsmtExposure(33) 1422
+BsmtFinType2(36) 1422, GarageType(59) 1379, GarageFinish(61) 1379, GarageQual(64) 1379, GarageCond(65) 1379, FireplaceQu(58) 770
+Fence(74) 281, Alley(7) 91, MiscFeature(75) 54, PoolQC(73) 7
+
+\newpage
+
+#Descriptive Statistics 
+
+|    vars        |id |  n	 | mean  |   sd	 | median | min |  max  | range |skew|kurtosis| se  |
+|----------------|--:|----:|------:|------:|-------:|----:|------:|------:|---:|--------|----:|
+| MSSubClass     | 2 |1460 |    57 |    42 |     50 |  20 |   190 |   170 |  1 |       2|    1|
+| LotFrontage    | 4 |1201 |    70 |    24 |     69 |  21 |   313 |   292 |  2 |      17|    1|
+| LotArea        | 5 |1460 | 10517 |  9981 |   9478 |1300 |215245 |213945 | 12 |     202|  261|
+| OverallQual    |18 |1460 |     6 |     1 |      6 |   1 |    10 |     9 |  0 |       0|    0|
+| OverallCond    |19 |1460 |     6 |     1 |      5 |   1 |     9 |     8 |  1 |       1|    0|
+| YearBuilt      |20 |1460 |  1971 |    30 |   1973 |1872 |  2010 |   138 | -1 |       0|    1|
+| YearRemodAdd   |21 |1460 |  1985 |    21 |   1994 |1950 |  2010 |    60 | -1 |      -1|    1|
+| MasVnrArea     |27 |1452 |   104 |   181 |      0 |   0 |  1600 |  1600 |  3 |      10|    5|
+| BsmtFinSF1     |35 |1460 |   444 |   456 |    384 |   0 |  5644 |  5644 |  2 |      11|   12|
+| BsmtFinSF2     |37 |1460 |    47 |   161 |      0 |   0 |  1474 |  1474 |  4 |      20|    4|
+| BsmtUnfSF      |38 |1460 |   567 |   442 |    478 |   0 |  2336 |  2336 |  1 |       0|   12|
+| TotalBsmtSF    |39 |1460 |  1057 |   439 |    992 |   0 |  6110 |  6110 |  2 |      13|   11|
+| X1stFlrSF      |44 |1460 |  1163 |   387 |   1087 | 334 |  4692 |  4358 |  1 |       6|   10|
+| X2ndFlrSF      |45 |1460 |   347 |   437 |      0 |   0 |  2065 |  2065 |  1 |      -1|   11|
+|-LowQualFinSF   |46 |1460 |     6 |    49 |      0 |   0 |   572 |   572 |  9 |      83|    1|
+| GrLivArea      |47 |1460 |  1515 |   525 |   1464 | 334 |  5642 |  5308 |  1 |       5|   14|
+| BsmtFullBath   |48 |1460 |     0 |     1 |      0 |   0 |     3 |     3 |  1 |      -1|    0|
+| BsmtHalfBath   |49 |1460 |     0 |     0 |      0 |   0 |     2 |     2 |  4 |      16|    0|
+| FullBath       |50 |1460 |     2 |     1 |      2 |   0 |     3 |     3 |  0 |      -1|    0|
+| HalfBath       |51 |1460 |     0 |     1 |      0 |   0 |     2 |     2 |  1 |      -1|    0|
+| BedroomAbvGr   |52 |1460 |     3 |     1 |      3 |   0 |     8 |     8 |  0 |       2|    0|
+| KitchenAbvGr   |53 |1460 |     1 |     0 |      1 |   0 |     3 |     3 |  4 |      21|    0|
+| TotRmsAbvGrd   |55 |1460 |     7 |     2 |      6 |   2 |    14 |    12 |  1 |       1|    0|
+| Fireplaces     |57 |1460 |     1 |     1 |      1 |   0 |     3 |     3 |  1 |       0|    0|
+| GarageYrBlt    |60 |1379 |  1979 |    25 |   1980 |1900 |  2010 |   110 | -1 |       0|    1|
+|-GarageCars     |62 |1460 |     2 |     1 |      2 |   0 |     4 |     4 |  0 |       0|    0|
+| GarageArea     |63 |1460 |   473 |   214 |    480 |   0 |  1418 |  1418 |  0 |       1|    6|
+| WoodDeckSF     |67 |1460 |    94 |   125 |      0 |   0 |   857 |   857 |  2 |       3|    3|
+| OpenPorchSF    |68 |1460 |    47 |    66 |     25 |   0 |   547 |   547 |  2 |       8|    2|
+| EnclosedPorch  |69 |1460 |    22 |    61 |      0 |   0 |   552 |   552 |  3 |      10|    2|
+| X3SsnPorch     |70 |1460 |     3 |    29 |      0 |   0 |   508 |   508 | 10 |     123|    1|
+| ScreenPorch    |71 |1460 |    15 |    56 |      0 |   0 |   480 |   480 |  4 |      18|    1|
+| PoolArea       |72 |1460 |     3 |    40 |      0 |   0 |   738 |   738 | 15 |     222|    1|
+| MiscVal        |76 |1460 |    43 |   496 |      0 |   0 | 15500 | 15500 | 24 |     698|   13|
+| MoSold         |77 |1460 |     6 |     3 |      6 |   1 |    12 |    11 |  0 |       0|    0|
+| YrSold         |78 |1460 |  2008 |     1 |   2008 |2006 |  2010 |     4 |  0 |      -1|    0|
+| SalePrice      |81 |1460 |180921 | 79443 | 163000 |4900 |755000 |720100 |  2 |       6| 2079|
+
+
+## Barplots & Catagorical Data 
+
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+g03 <- ggplot(AmesHomes, aes(x = MSZoning)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Zoning Proportions") + theme(text = element_text(size = 5))
+AmesHomes$MSZoning <- factor(AmesHomes$MSZoning)
+
+g06 <- ggplot(AmesHomes, aes(x = Street)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Street Proportions") + theme(text = element_text(size = 5))
+AmesHomes$Street <- factor(AmesHomes$Street) 
+
+g07 <- ggplot(AmesHomes, aes(x = Alley)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Alley Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Alley <- factor(AmesHomes$Alley)
+
+g08 <- ggplot(AmesHomes, aes(x = LotShape)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotShape Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$LotShape <- factor(AmesHomes$LotShape)
+
+g09 <- ggplot(AmesHomes, aes(x = LandContour)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandContour Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$LandContour <- factor(AmesHomes$LandContour)
+
+g10 <- ggplot(AmesHomes, aes(x = Utilities)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Utilities Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Utilities <- factor(AmesHomes$Utilities)
+
+g11 <- ggplot(AmesHomes, aes(x = LotConfig)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotConfig Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$LotConfig <- factor(AmesHomes$LotConfig)
+
+g12 <- ggplot(AmesHomes, aes(x = LandSlope)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandSlope Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$LandSlope <- factor(AmesHomes$LandSlope)
+
+g13 <- ggplot(AmesHomes, aes(x = Neighborhood)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Neighborhood Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Neighborhood <- factor(AmesHomes$Neighborhood)
+
+g14 <- ggplot(AmesHomes, aes(x = Condition1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition1 Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Condition1 <- factor(AmesHomes$Condition1)
+
+g15 <- ggplot(AmesHomes, aes(x = Condition2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition2 Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Condition2 <- factor(AmesHomes$Condition2)
+
+g16 <- ggplot(AmesHomes, aes(x = BldgType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BldgType Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BldgType <- factor(AmesHomes$BldgType)
+
+g17 <- ggplot(AmesHomes, aes(x = HouseStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HouseStyle Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$HouseStyle <- factor(AmesHomes$HouseStyle)
+
+g22 <- ggplot(AmesHomes, aes(x = RoofStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("RoofStyle Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$RoofStyle <- factor(AmesHomes$RoofStyle)
+
+g23 <- ggplot(AmesHomes, aes(x = RoofMatl)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("RoofMatl Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$RoofMatl <- factor(AmesHomes$RoofMatl)
+
+g24 <- ggplot(AmesHomes, aes(x = Exterior1st)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Exterior1st Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Exterior1st <- factor(AmesHomes$Exterior1st)
+
+g25 <- ggplot(AmesHomes, aes(x = Exterior2nd)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Exterior2nd Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Exterior2nd <- factor(AmesHomes$Exterior2nd)
+
+g26 <- ggplot(AmesHomes, aes(x = MasVnrType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MasVnrType Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$MasVnrType <- factor(AmesHomes$MasVnrType)
+
+g28 <- ggplot(AmesHomes, aes(x = ExterQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterQual Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$ExterQual <- factor(AmesHomes$ExterQual)
+
+g29 <- ggplot(AmesHomes, aes(x = ExterCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterCond Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$ExterCond <- factor(AmesHomes$ExterCond)
+
+g30 <- ggplot(AmesHomes, aes(x = Foundation)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Foundation Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Foundation <- factor(AmesHomes$Foundation)
+
+g31 <- ggplot(AmesHomes, aes(x = BsmtQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtQual Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BsmtQual <- factor(AmesHomes$BsmtQual)
+
+g32 <- ggplot(AmesHomes, aes(x = BsmtCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtCond Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BsmtCond <- factor(AmesHomes$BsmtCond)
+
+g33 <- ggplot(AmesHomes, aes(x = BsmtExposure)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtExposure Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BsmtExposure <- factor(AmesHomes$BsmtExposure)
+
+g34 <- ggplot(AmesHomes, aes(x = BsmtFinType1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType1 Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BsmtFinType1 <- factor(AmesHomes$BsmtFinType1)
+
+g36 <- ggplot(AmesHomes, aes(x = BsmtFinType2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType2 Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$BsmtFinType2 <- factor(AmesHomes$BsmtFinType2)
+
+g40 <- ggplot(AmesHomes, aes(x = Heating)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Heating Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Heating <- factor(AmesHomes$Heating)
+
+g41 <- ggplot(AmesHomes, aes(x = HeatingQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HeatingQC Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$HeatingQC <- factor(AmesHomes$HeatingQC)
+
+g42 <- ggplot(AmesHomes, aes(x = CentralAir)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("CentralAir Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$CentralAir <- factor(AmesHomes$CentralAir)
+
+g43 <- ggplot(AmesHomes, aes(x = Electrical)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Electrical Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Electrical <- factor(AmesHomes$Electrical)
+
+g54 <- ggplot(AmesHomes, aes(x = KitchenQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("KitchenQual Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$KitchenQual <- factor(AmesHomes$KitchenQual)
+
+g56 <- ggplot(AmesHomes, aes(x = Functional)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Functional Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Functional <- factor(AmesHomes$Functional)
+
+g58 <- ggplot(AmesHomes, aes(x = FireplaceQu)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("FireplaceQu Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$FireplaceQu <- factor(AmesHomes$FireplaceQu)
+
+g59 <- ggplot(AmesHomes, aes(x = GarageType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageType Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$GarageType <- factor(AmesHomes$GarageType)
+
+g61 <- ggplot(AmesHomes, aes(x = GarageFinish)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageFinish Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$GarageFinish <- factor(AmesHomes$GarageFinish)
+
+g64 <- ggplot(AmesHomes, aes(x = GarageQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageQual Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$GarageQual <- factor(AmesHomes$GarageQual)
+
+g65 <- ggplot(AmesHomes, aes(x = GarageCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageCond Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$GarageCond <- factor(AmesHomes$GarageCond)
+
+g66 <- ggplot(AmesHomes, aes(x = PavedDrive)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PavedDrive Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$PavedDrive <- factor(AmesHomes$PavedDrive)
+
+g73 <- ggplot(AmesHomes, aes(x = PoolQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PoolQC Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$PoolQC <- factor(AmesHomes$PoolQC)
+
+g74 <- ggplot(AmesHomes, aes(x = Fence)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Fence Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$Fence <- factor(AmesHomes$Fence)
+
+g75 <- ggplot(AmesHomes, aes(x = MiscFeature)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MiscFeature Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$MiscFeature <- factor(AmesHomes$MiscFeature)
+
+g79 <- ggplot(AmesHomes, aes(x = SaleType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleType Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$SaleType <- factor(AmesHomes$SaleType)
+
+g80 <- ggplot(AmesHomes, aes(x = SaleCondition)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleCondition Proportions")+ theme(text = element_text(size = 5))
+AmesHomes$SaleCondition <- factor(AmesHomes$SaleCondition)
+
+grid.arrange(
+  g03,g06,g07,g08,g09,g10,g11,g12,g13,
+  g14,g15,g16,g17,g22,g23,g24,g25,g26,
+  g28,g29
+)
+
+grid.arrange(
+  g30,g31,g32,g33,g34,g36,g40,g41,g42,
+  g43,g54,g56,g58,g59,g61,g64,g65,g66,
+  g73,g74,g75,g79,g80
+)  
+```
+
+## Histograms for Ordinal Data 
+
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+# Make small histograms for each variable
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#####################################################################
+#AmesHomes.02 <- AmesHomes
+hist(AmesHomes$MSSubClass, breaks = 100, col = 'yellow')
+
+#AmesHomes.04 <- AmesHomes
+hist(AmesHomes$LotFrontage, breaks = 100, col = 'yellow')
+
+#AmesHomes.05 <- AmesHomes
+hist(AmesHomes$LotArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.18 <- AmesHomes
+hist(AmesHomes$OverallQual, breaks = 100, col = 'yellow')
+
+#AmesHomes.19 <- AmesHomes
+hist(AmesHomes$OverallCond, breaks = 100, col = 'yellow')
+
+#AmesHomes.20 <- AmesHomes
+hist(AmesHomes$YearBuilt, breaks = 100, col = 'yellow')
+
+#AmesHomes.21 <- AmesHomes
+hist(AmesHomes$YearRemodAdd, breaks = 100, col = 'yellow')
+
+#AmesHomes.27 <- AmesHomes
+hist(AmesHomes$MasVnrArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.35 <- AmesHomes
+hist(AmesHomes$BsmtFinSF1, breaks = 100, col = 'yellow')
+
+#AmesHomes.37 <- AmesHomes
+hist(AmesHomes$BsmtFinSF2, breaks = 100, col = 'yellow')
+
+#AmesHomes.38 <- AmesHomes
+hist(AmesHomes$BsmtUnfSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.39 <- AmesHomes
+hist(AmesHomes$TotalBsmtSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.44 <- AmesHomes
+hist(AmesHomes$X1stFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.45 <- AmesHomes
+hist(AmesHomes$X2ndFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.46 <- AmesHomes
+hist(AmesHomes$LowQualFinSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.47 <- AmesHomes
+hist(AmesHomes$GrLivArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.48 <- AmesHomes
+hist(AmesHomes$BsmtFullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.49 <- AmesHomes
+hist(AmesHomes$BsmtHalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.50 <- AmesHomes
+hist(AmesHomes$FullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.51 <- AmesHomes
+hist(AmesHomes$HalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.52 <- AmesHomes
+hist(AmesHomes$BedroomAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.53 <- AmesHomes
+hist(AmesHomes$KitchenAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.55 <- AmesHomes
+hist(AmesHomes$TotRmsAbvGrd, breaks = 100, col = 'yellow')
+
+#AmesHomes.57 <- AmesHomes
+hist(AmesHomes$Fireplaces, breaks = 100, col = 'yellow')
+
+#AmesHomes.60 <- AmesHomes
+hist(AmesHomes$GarageYrBlt, breaks = 100, col = 'yellow')
+
+#AmesHomes.62 <- AmesHomes
+hist(AmesHomes$GarageCars, breaks = 100, col = 'yellow')
+
+#AmesHomes.63 <- AmesHomes
+hist(AmesHomes$GarageArea, breaks = 100, col = 'yellow')
+
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#AmesHomes.67 <- AmesHomes
+hist(AmesHomes$WoodDeckSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.68 <- AmesHomes
+hist(AmesHomes$OpenPorchSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.69 <- AmesHomes
+hist(AmesHomes$EnclosedPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.70 <- AmesHomes
+hist(AmesHomes$X3SsnPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.71 <- AmesHomes
+hist(AmesHomes$ScreenPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.72 <- AmesHomes
+hist(AmesHomes$PoolArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.76 <- AmesHomes
+hist(AmesHomes$MiscVal, breaks = 100, col = 'yellow')
+
+#AmesHomes.77 <- AmesHomes
+hist(AmesHomes$MoSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.78 <- AmesHomes
+hist(AmesHomes$YrSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.81 <- AmesHomes
+hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
+
+#AmesHomes.02 <- AmesHomes
+hist(AmesHomes$MSSubClass, breaks = 100, col = 'yellow')
+
+#AmesHomes.04 <- AmesHomes
+hist(AmesHomes$LotFrontage, breaks = 100, col = 'yellow')
+
+#AmesHomes.05 <- AmesHomes
+hist(AmesHomes$LotArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.18 <- AmesHomes
+hist(AmesHomes$OverallQual, breaks = 100, col = 'yellow')
+
+#AmesHomes.19 <- AmesHomes
+hist(AmesHomes$OverallCond, breaks = 100, col = 'yellow')
+
+#AmesHomes.20 <- AmesHomes
+hist(AmesHomes$YearBuilt, breaks = 100, col = 'yellow')
+
+#AmesHomes.21 <- AmesHomes
+hist(AmesHomes$YearRemodAdd, breaks = 100, col = 'yellow')
+
+#AmesHomes.27 <- AmesHomes
+hist(AmesHomes$MasVnrArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.35 <- AmesHomes
+hist(AmesHomes$BsmtFinSF1, breaks = 100, col = 'yellow')
+
+#AmesHomes.37 <- AmesHomes
+hist(AmesHomes$BsmtFinSF2, breaks = 100, col = 'yellow')
+
+#AmesHomes.38 <- AmesHomes
+hist(AmesHomes$BsmtUnfSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.39 <- AmesHomes
+hist(AmesHomes$TotalBsmtSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.44 <- AmesHomes
+hist(AmesHomes$X1stFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.45 <- AmesHomes
+hist(AmesHomes$X2ndFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.46 <- AmesHomes
+hist(AmesHomes$LowQualFinSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.47 <- AmesHomes
+hist(AmesHomes$GrLivArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.48 <- AmesHomes
+hist(AmesHomes$BsmtFullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.49 <- AmesHomes
+hist(AmesHomes$BsmtHalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.50 <- AmesHomes
+hist(AmesHomes$FullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.51 <- AmesHomes
+hist(AmesHomes$HalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.52 <- AmesHomes
+hist(AmesHomes$BedroomAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.53 <- AmesHomes
+hist(AmesHomes$KitchenAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.55 <- AmesHomes
+hist(AmesHomes$TotRmsAbvGrd, breaks = 100, col = 'yellow')
+
+#AmesHomes.57 <- AmesHomes
+hist(AmesHomes$Fireplaces, breaks = 100, col = 'yellow')
+
+#AmesHomes.60 <- AmesHomes
+hist(AmesHomes$GarageYrBlt, breaks = 100, col = 'yellow')
+
+#AmesHomes.62 <- AmesHomes
+hist(AmesHomes$GarageCars, breaks = 100, col = 'yellow')
+
+#AmesHomes.63 <- AmesHomes
+hist(AmesHomes$GarageArea, breaks = 100, col = 'yellow')
+
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#AmesHomes.67 <- AmesHomes
+hist(AmesHomes$WoodDeckSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.68 <- AmesHomes
+hist(AmesHomes$OpenPorchSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.69 <- AmesHomes
+hist(AmesHomes$EnclosedPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.70 <- AmesHomes
+hist(AmesHomes$X3SsnPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.71 <- AmesHomes
+hist(AmesHomes$ScreenPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.72 <- AmesHomes
+hist(AmesHomes$PoolArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.76 <- AmesHomes
+hist(AmesHomes$MiscVal, breaks = 100, col = 'yellow')
+
+#AmesHomes.77 <- AmesHomes
+hist(AmesHomes$MoSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.78 <- AmesHomes
+hist(AmesHomes$YrSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.81 <- AmesHomes
+hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
+```
+
+
+```{r,include=FALSE, echo=FALSE}
+# c <- round(cor(AmesHomes[sapply(AmesHomes, is.numeric)], use = "complete"), 2)
+# c <- data.frame(c)
+# 
+# tt <- ttheme_default(
+#         core=list(
+#             bg_params = list( col=NA), 
+#             fg_params = list(fontface=5, hjust=1, x=0.9)
+#         ),
+#         colhead=list(
+#           fg_params = list(parse=TRUE,rot=90,fontface=3L)
+#         )
+#       )
+# 
+# #displays too big in markdown, just print image
+# grid.table(c,theme=tt)
+# #browseVignettes("gridExtra")
+```
+
+####Conclusion of Data Exploration
+During our data exploration efforts we identified variable(s) that can justifiably be ignored during model building, and we ranked correlation amongst various predictor variables that could be used to order inclusion one or more other variables during the model building process. Furthermore, we identified recurring variable values, require further investigation to determine whether or not additional action might be required to make use of those rows in our analysis. Finally, we identified three variables (. . . ) that are good candidates for transformation during the Data Preparation process. 
+
+__--------------------------------------------------------------------------------------------------------------------------__
+
+# Part 2 - Data Preparation
+
+Our Data Preparation efforts included an investigation of what appeared to have been an abnormally large number of records within the data set having shared values, proposing the conversion of two predictor variables to binary "0/1" factor variables, and simplifying the interpretation of the 'black' variable via mathematical transformation. While we also considered the possibility of transforming one or more of the predictor variables that have skewed distributions, we chose not to apply any such transforms prior to model building since normal distributions aren't necessarily required for logistical regression modeling. Transforms can be applied if the marginal model plots for a logistic regression model show evidence of deviance between the modeled data and the actual data, but aren't required prior to model building.
+
+__--------------------------------------------------------------------------------------------------------------------------__
+
+
+# Part 3 - Build Models
+
+## Model 1: Use the bestglm Function to Build a Model
+
+```{r,eval=TRUE, include=FALSE}
+# Stepwise Regression
+fit <- lm(SalePrice ~ . -Id, data = AmesHomes)
+summary(fit)
+step <- stepAIC(fit, direction="both")
+step$anova # display results 
+```
+
+```{r,eval=TRUE, include=TRUE}
+# Final Model:
+fit <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContour + 
+    Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + 
+    Condition2 + BldgType + OverallQual + OverallCond + YearBuilt + 
+    YearRemodAdd + RoofStyle + RoofMatl + Exterior1st + MasVnrType + 
+    MasVnrArea + ExterQual + BsmtQual + BsmtCond + BsmtExposure + 
+    BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + 
+    BsmtFullBath + FullBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + 
+    TotRmsAbvGrd + Functional + Fireplaces + GarageCars + GarageArea + 
+    GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
+    PoolQC + Fence + MoSold + SaleCondition, data = AmesHomes
+)
+
+summary(fit)
+```
+
+__--------------------------------------------------------------------------------------------------------------------------__
+
+
+# Part 4 - Generate Test Predictions from Model
+
+```{r, fig.width = 9, fig.height = 7, include = FALSE}
+# If what you want is to predict scores using your resulting regression equation, you can construct the equation by hand by typing summary(fit) (if your regression analysis is stored in a variable called fit, for example), and looking at the estimates for each coefficient included in your model.
+# 
+# For example, if you have a simple regression of the type y=B0+B1x+e
+# , and you get an estimate of the intercept (B0) of +0.5 and an estimate of the effect of x on y (B1) of +1.6, you would predict an individual's y score from their x score by computing: y=0.5+1.6x
+# 
+# However, this is the hard route. R has a built-in function, predict(), which you can use to automatically compute predicted values given a model for any dataset. For example: predict(fit, newdata=data), if the x scores you want to use to predict y scores are stored in the variable data. (Note that in order to see the predicted scores for the sample on which your regression was performed, you can simply type fit$fitted or fitted(fit); these will give you the predicted, a.k.a. fitted, values.)
+
+# First Load Test Data
+#url <- "~/IS605Fall2016/Project/test.csv"
+url <- "https://raw.githubusercontent.com/scottkarr/IS605-scottkarr-final/5ca63dde10742356eff5c21dfbc9132f5aac73c4/test.csv"
+AmesHomes.t <- read.csv(url, stringsAsFactors = FALSE)
+attach(AmesHomes.t)
+```
+
+```{r, eval=TRUE, include=FALSE}
+# Apply the same data cleaning imputations that were applied to training data set
+# imput 81 GarageYrBlt nulls with YearBuilt
+# imput 81 GarageYrBlt nulls with YearBuilt
+AmesHomes.t$GarageYrBlt[is.na(AmesHomes.t$GarageYrBlt)] <- AmesHomes.t$YearBuilt[is.na(AmesHomes.t$GarageYrBlt)] 
+
+# impute LotFrontage nulls with 0
+AmesHomes.t$LotFrontage[is.na(AmesHomes.t$LotFrontage)] <- 0
+
+# impute MasVnrArea with 0
+AmesHomes.t$MasVnrArea[is.na(AmesHomes.t$MasVnrArea)] <- 0
+
+# imput 1369 nulls for Alley with 'None'
+AmesHomes.t$Alley[is.na(AmesHomes.t$Alley)] <- 'None'
+
+# impute 8 nulls for MasVnrType with 'None'
+AmesHomes.t$MasVnrType[is.na(AmesHomes.t$MasVnrType)] <- 'None'
+
+# impute 37 nulls for BsmtQual with 'None'
+AmesHomes.t$BsmtQual[is.na(AmesHomes.t$BsmtQual)] <- 'None'
+
+# impute 37 nulls for BsmtCond with 'None'
+AmesHomes.t$BsmtCond[is.na(AmesHomes.t$BsmtCond)] <- 'Xa'
+
+# impute 37 nulls for BsmtExposure with 'None'
+AmesHomes.t$BsmtExposure[is.na(AmesHomes.t$BsmtExposure)] <- 'Xb'
+
+# impute 37 nulls for BsmtFinType1 with 'None'
+AmesHomes.t$BsmtFinType1[is.na(AmesHomes.t$BsmtFinType1)] <- 'Xc'
+
+# impute 38 nulls for BsmtFinType2 with 'None'
+# impute BsmtFinType2
+AmesHomes.t$BsmtFinType2[is.na(AmesHomes.t$BsmtFinType2)] <- 'Xd'
+
+# impute 81 nulls for GarageTypewith 'None'
+AmesHomes.t$GarageType [is.na(AmesHomes.t$GarageType )] <- 'Xe'
+
+# impute 81 nulls for GarageFinish with 'None'
+AmesHomes.t$GarageFinish[is.na(AmesHomes.t$GarageFinish)] <- 'Xf'
+
+# impute 81 nulls for GarageQual with 'None'
+AmesHomes.t$GarageQual[is.na(AmesHomes.t$GarageQual)] <- 'Xg'
+
+# impute 81 nulls for GarageCond with 'None'
+AmesHomes.t$GarageCond[is.na(AmesHomes.t$GarageCond)] <- 'Xh'
+
+# impute 1 null for Electrical with 'None'
+AmesHomes.t$Electrical[is.na(AmesHomes.t$Electrical)] <- 'None'
+
+# impute 690 nulls for FireplaceQu with 'None'
+AmesHomes.t$FireplaceQu[is.na(AmesHomes.t$FireplaceQu)] <- 'None'
+
+# impute 1453 nulls for PoolQC with 'None'
+AmesHomes.t$PoolQC[is.na(AmesHomes.t$PoolQC)] <- 'None'
+
+# impute 1179 nulls for Fence with 'None'
+AmesHomes.t$Fence[is.na(AmesHomes.t$Fence)] <- 'None'
+
+# impute 1406 nulls for MiscFeature with 'None
+AmesHomes.t$MiscFeature[is.na(AmesHomes.t$MiscFeature)] <- 'None'
+
+# impute 5 nulls for MSZoning with 'None'
+AmesHomes.t$MSZoning[is.na(AmesHomes.t$MSZoning)] <- 'None'
+
+# impute 2 nulls for Utilities with 'None'
+AmesHomes.t$Utilities[is.na(AmesHomes.t$Utilities)] <- 'None'
+
+# impute 2 nulls for Functional with 'None'
+AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'None'
+
+# impute 2 nulls for BsmtFullBath with 'None'
+AmesHomes.t$BsmtFullBath[is.na(AmesHomes.t$BsmtFullBath)] <- 0
+
+# impute 2 nulls for BsmtHalfBath with 'None'
+AmesHomes.t$BsmtHalfBath[is.na(AmesHomes.t$BsmtHalfBath)] <- 0
+
+# impute 1 nulls for Exterior1st with 'None'
+AmesHomes.t$Utilities[is.na(AmesHomes.t$Utilities)] <- 'None'
+
+# impute 1 nulls for Exterior2nd with 'None'
+AmesHomes.t$Exterior1st[is.na(AmesHomes.t$Exterior1st)] <- 'None'
+
+# impute 1 nulls for Utilities with 'None'
+AmesHomes.t$Exterior2nd[is.na(AmesHomes.t$Exterior2nd)] <- 'None'
+
+# impute 1 nulls for Functional with 'None'
+AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'None'
+
+# impute 1 nulls for BsmtFinSF1 with 'None'
+AmesHomes.t$BsmtFinSF1[is.na(AmesHomes.t$BsmtFinSF1)] <- 0
+
+# impute 1 nulls for BsmtFinSF2 with 'None'
+AmesHomes.t$BsmtFinSF2[is.na(AmesHomes.t$BsmtFinSF2)] <- 0
+
+# impute 1 nulls for BsmtUnfSF with 'None'
+AmesHomes.t$BsmtUnfSF[is.na(AmesHomes.t$BsmtUnfSF)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes.t$TotalBsmtSF[is.na(AmesHomes.t$TotalBsmtSF)] <- 0
+
+# impute 1 nulls for GarageCars with 'None'
+AmesHomes.t$GarageCars[is.na(AmesHomes.t$GarageCars)] <- 0
+
+# impute 1 nulls for GarageArea with 'None'
+AmesHomes.t$GarageArea[is.na(AmesHomes.t$GarageArea)] <- 0
+
+# impute 1 nulls for TotalBsmtSF with 'None'
+AmesHomes.t$SaleType[is.na(AmesHomes.t$SaleType)] <- 'None'
+# Show Descriptive Statistics
+# des <- describeBy(AmesHomes.t)[,-c(6,7)]
+# print(des, digits=0)
+
+#describeData(AmesHomes.t)
+```
+
+## Barplots & Catagorical Data 
+
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+g03 <- ggplot(AmesHomes.t, aes(x = MSZoning)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) + theme(text = element_text(size = 5))
+        ggtitle("Zoning Proportions")
+AmesHomes.t$MSZoning <- factor(AmesHomes.t$MSZoning)
+
+g06 <- ggplot(AmesHomes.t, aes(x = Street)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Street Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Street <- factor(AmesHomes.t$Street) 
+
+g07 <- ggplot(AmesHomes.t, aes(x = Alley)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Alley Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Alley <- factor(AmesHomes.t$Alley)
+
+g08 <- ggplot(AmesHomes.t, aes(x = LotShape)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotShape Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$LotShape <- factor(AmesHomes.t$LotShape)
+
+g09 <- ggplot(AmesHomes.t, aes(x = LandContour)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandContour Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$LandContour <- factor(AmesHomes.t$LandContour)
+
+g10 <- ggplot(AmesHomes.t, aes(x = Utilities)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Utilities Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Utilities <- factor(AmesHomes.t$Utilities)
+
+g11 <- ggplot(AmesHomes.t, aes(x = LotConfig)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LotConfig Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$LotConfig <- factor(AmesHomes.t$LotConfig)
+
+g12 <- ggplot(AmesHomes.t, aes(x = LandSlope)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("LandSlope Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$LandSlope <- factor(AmesHomes.t$LandSlope)
+
+g13 <- ggplot(AmesHomes.t, aes(x = Neighborhood)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Neighborhood Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Neighborhood <- factor(AmesHomes.t$Neighborhood)
+
+g14 <- ggplot(AmesHomes.t, aes(x = Condition1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition1 Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Condition1 <- factor(AmesHomes.t$Condition1)
+
+g15 <- ggplot(AmesHomes.t, aes(x = Condition2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Condition2 Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Condition2 <- factor(AmesHomes.t$Condition2)
+
+g16 <- ggplot(AmesHomes.t, aes(x = BldgType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BldgType Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BldgType <- factor(AmesHomes.t$BldgType)
+
+g17 <- ggplot(AmesHomes.t, aes(x = HouseStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HouseStyle Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$HouseStyle <- factor(AmesHomes.t$HouseStyle)
+
+g22 <- ggplot(AmesHomes.t, aes(x = RoofStyle)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) + theme(text = element_text(size = 5))
+        ggtitle("RoofStyle Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$RoofStyle <- factor(AmesHomes.t$RoofStyle)
+
+g23 <- ggplot(AmesHomes.t, aes(x = RoofMatl)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("RoofMatl Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$RoofMatl <- factor(AmesHomes.t$RoofMatl)
+
+g24 <- ggplot(AmesHomes.t, aes(x = Exterior1st)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) + theme(text = element_text(size = 5))
+        ggtitle("Exterior1st Proportions")
+AmesHomes.t$Exterior1st <- factor(AmesHomes.t$Exterior1st)
+
+g25 <- ggplot(AmesHomes.t, aes(x = Exterior2nd)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Exterior2nd Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Exterior2nd <- factor(AmesHomes.t$Exterior2nd)
+
+g26 <- ggplot(AmesHomes.t, aes(x = MasVnrType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MasVnrType Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$MasVnrType <- factor(AmesHomes.t$MasVnrType)
+
+g28 <- ggplot(AmesHomes.t, aes(x = ExterQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterQual Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$ExterQual <- factor(AmesHomes.t$ExterQual)
+
+g29 <- ggplot(AmesHomes.t, aes(x = ExterCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("ExterCond Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$ExterCond <- factor(AmesHomes.t$ExterCond)
+
+g30 <- ggplot(AmesHomes.t, aes(x = Foundation)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Foundation Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Foundation <- factor(AmesHomes.t$Foundation)
+
+g31 <- ggplot(AmesHomes.t, aes(x = BsmtQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtQual Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BsmtQual <- factor(AmesHomes.t$BsmtQual)
+
+g32 <- ggplot(AmesHomes.t, aes(x = BsmtCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtCond Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BsmtCond <- factor(AmesHomes.t$BsmtCond)
+
+g33 <- ggplot(AmesHomes.t, aes(x = BsmtExposure)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtExposure Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BsmtExposure <- factor(AmesHomes.t$BsmtExposure)
+
+g34 <- ggplot(AmesHomes.t, aes(x = BsmtFinType1)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType1 Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BsmtFinType1 <- factor(AmesHomes.t$BsmtFinType1)
+
+g36 <- ggplot(AmesHomes.t, aes(x = BsmtFinType2)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("BsmtFinType2 Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$BsmtFinType2 <- factor(AmesHomes.t$BsmtFinType2)
+
+g40 <- ggplot(AmesHomes.t, aes(x = Heating)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Heating Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Heating <- factor(AmesHomes.t$Heating)
+
+g41 <- ggplot(AmesHomes.t, aes(x = HeatingQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("HeatingQC Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$HeatingQC <- factor(AmesHomes.t$HeatingQC)
+
+g42 <- ggplot(AmesHomes.t, aes(x = CentralAir)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("CentralAir Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$CentralAir <- factor(AmesHomes.t$CentralAir)
+
+g43 <- ggplot(AmesHomes.t, aes(x = Electrical)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Electrical Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Electrical <- factor(AmesHomes.t$Electrical)
+
+g54 <- ggplot(AmesHomes.t, aes(x = KitchenQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("KitchenQual Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$KitchenQual <- factor(AmesHomes.t$KitchenQual)
+
+g56 <- ggplot(AmesHomes.t, aes(x = Functional)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Functional Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Functional <- factor(AmesHomes.t$Functional)
+
+g58 <- ggplot(AmesHomes.t, aes(x = FireplaceQu)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("FireplaceQu Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$FireplaceQu <- factor(AmesHomes.t$FireplaceQu)
+
+g59 <- ggplot(AmesHomes.t, aes(x = GarageType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageType Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$GarageType <- factor(AmesHomes.t$GarageType)
+
+g61 <- ggplot(AmesHomes.t, aes(x = GarageFinish)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageFinish Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$GarageFinish <- factor(AmesHomes.t$GarageFinish)
+
+g64 <- ggplot(AmesHomes.t, aes(x = GarageQual)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageQual Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$GarageQual <- factor(AmesHomes.t$GarageQual)
+
+g65 <- ggplot(AmesHomes.t, aes(x = GarageCond)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("GarageCond Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$GarageCond <- factor(AmesHomes.t$GarageCond)
+
+g66 <- ggplot(AmesHomes.t, aes(x = PavedDrive)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PavedDrive Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$PavedDrive <- factor(AmesHomes.t$PavedDrive)
+
+g73 <- ggplot(AmesHomes.t, aes(x = PoolQC)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("PoolQC Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$PoolQC <- factor(AmesHomes.t$PoolQC)
+
+g74 <- ggplot(AmesHomes.t, aes(x = Fence)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("Fence Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$Fence <- factor(AmesHomes.t$Fence)
+
+g75 <- ggplot(AmesHomes.t, aes(x = MiscFeature)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("MiscFeature Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$MiscFeature <- factor(AmesHomes.t$MiscFeature)
+
+g79 <- ggplot(AmesHomes.t, aes(x = SaleType)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleType Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$SaleType <- factor(AmesHomes.t$SaleType)
+
+g80 <- ggplot(AmesHomes.t, aes(x = SaleCondition)) +  
+        geom_bar(aes(y = (..count..)/sum(..count..))) + 
+        scale_y_continuous(labels=percent) +
+        ggtitle("SaleCondition Proportions") + theme(text = element_text(size = 5))
+AmesHomes.t$SaleCondition <- factor(AmesHomes.t$SaleCondition)
+
+grid.arrange(
+  g03,g06,g07,g08,g09,g10,g11,g12,g13,
+  g14,g15,g16,g17,g22,g23,g24,g25,g26,
+  g28,g29
+)
+
+grid.arrange(
+  g30,g31,g32,g33,g34,g36,g40,g41,g42,
+  g43,g54,g56,g58,g59,g61,g64,g65,g66,
+  g73,g74,g75,g79,g80
+)  
+```
+
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+#####################################################################
+# Make small histograms for each variable
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+AmesHomes.t.02 <- AmesHomes.t
+hist(AmesHomes.t$MSSubClass, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.04 <- AmesHomes.t
+hist(AmesHomes.t$LotFrontage, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.05 <- AmesHomes.t
+hist(AmesHomes.t$LotArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.18 <- AmesHomes.t
+hist(AmesHomes.t$OverallQual, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.19 <- AmesHomes.t
+hist(AmesHomes.t$OverallCond, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.20 <- AmesHomes.t
+hist(AmesHomes.t$YearBuilt, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.21 <- AmesHomes.t
+hist(AmesHomes.t$YearRemodAdd, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.27 <- AmesHomes.t
+hist(AmesHomes.t$MasVnrArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.35 <- AmesHomes.t
+hist(AmesHomes.t$BsmtFinSF1, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.37 <- AmesHomes.t
+hist(AmesHomes.t$BsmtFinSF2, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.38 <- AmesHomes.t
+hist(AmesHomes.t$BsmtUnfSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.39 <- AmesHomes.t
+hist(AmesHomes.t$TotalBsmtSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.44 <- AmesHomes.t
+hist(AmesHomes.t$X1stFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.45 <- AmesHomes.t
+hist(AmesHomes.t$X2ndFlrSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.46 <- AmesHomes.t
+hist(AmesHomes.t$LowQualFinSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.47 <- AmesHomes.t
+hist(AmesHomes.t$GrLivArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.48 <- AmesHomes.t
+hist(AmesHomes.t$BsmtFullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.49 <- AmesHomes.t
+hist(AmesHomes.t$BsmtHalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.50 <- AmesHomes.t
+hist(AmesHomes.t$FullBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.51 <- AmesHomes.t
+hist(AmesHomes.t$HalfBath, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.52 <- AmesHomes.t
+hist(AmesHomes.t$BedroomAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.53 <- AmesHomes.t
+hist(AmesHomes.t$KitchenAbvGr, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.55 <- AmesHomes.t
+hist(AmesHomes.t$TotRmsAbvGrd, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.57 <- AmesHomes.t
+hist(AmesHomes.t$Fireplaces, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.60 <- AmesHomes.t
+hist(AmesHomes.t$GarageYrBlt, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.62 <- AmesHomes.t
+hist(AmesHomes.t$GarageCars, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.63 <- AmesHomes.t
+hist(AmesHomes.t$GarageArea, breaks = 100, col = 'yellow')
+
+par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
+
+#AmesHomes.t.67 <- AmesHomes.t
+hist(AmesHomes.t$WoodDeckSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.68 <- AmesHomes.t
+hist(AmesHomes.t$OpenPorchSF, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.69 <- AmesHomes.t
+hist(AmesHomes.t$EnclosedPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.70 <- AmesHomes.t
+hist(AmesHomes.t$X3SsnPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.71 <- AmesHomes.t
+hist(AmesHomes.t$ScreenPorch, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.72 <- AmesHomes.t
+hist(AmesHomes.t$PoolArea, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.76 <- AmesHomes.t
+hist(AmesHomes.t$MiscVal, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.77 <- AmesHomes.t
+hist(AmesHomes.t$MoSold, breaks = 100, col = 'yellow')
+
+#AmesHomes.t.78 <- AmesHomes.t
+hist(AmesHomes.t$YrSold, breaks = 100, col = 'yellow')
+```
+
+```{r,include=FALSE, echo=FALSE}
+# c <- round(cor(AmesHomes.t[sapply(AmesHomes.t, is.numeric)], use = "complete"), 2)
+# c <- data.frame(c)
+# 
+# tt <- ttheme_default(
+#         core=list(
+#             bg_params = list( col=NA), 
+#             fg_params = list(fontface=5, hjust=1, x=0.9)
+#         ),
+#         colhead=list(
+#           fg_params = list(parse=TRUE,rot=90,fontface=3L)
+#         )
+#       )
+# 
+# #displays too big in markdown, just print image
+# grid.table(c,theme=tt)
+# #browseVignettes("gridExtra")
+```
+
+```{r, eval=TRUE, include=FALSE}
+predict(fit, data=AmesHomes.t)
+predictions <- fit$fitted.values
+predictions_df <- data.frame(predictions)
+write.csv(predictions_df, file = "predictions.csv")
+```
