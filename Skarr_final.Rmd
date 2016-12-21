@@ -2,7 +2,11 @@
 title: "DATA 605 Final Project"
 author: "Scott Karr"
 date: "Dec 23, 2016"
-output: html_document
+output: 
+  html_document: 
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
 ---
 
 ```{r,eval=TRUE,include=FALSE}
@@ -28,17 +32,17 @@ des <- describeBy(AmesHomes)[,-c(6,7)]
 print(des, digits=0)
 ```
 
-#### Setup
+# Setup
 Pick one of the quanititative independent variables from the training data set (train.csv) , and define that 
 variable as  X.   Make sure this variable is skewed to the right!  Pick the dependent variable and define it 
 as  Y. 
 
-#### Probability.  
+# Probability.  
 ```{r, distributions, eval=TRUE}
 X <- AmesHomes$GrLivArea
 Y <- AmesHomes$SalePrice
 
-par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,2))
+par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,1))
 hist(AmesHomes$GrLivArea,breaks=25, main='X')
 hist(AmesHomes$SalePrice,breaks=50, main='Y')
 ```
@@ -55,7 +59,7 @@ Q.  Calculate as a minimum the below probabilities a through c.
     Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is 
     estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.
 
-A.  Gross Living Area is not independent of Sales Price.  What is the conditional probability of GLA being greater
+-   Gross Living Area is not independent of Sales Price.  What is the conditional probability of GLA being greater
     than 1776.75 sq ft given the sales price is greater than $163,000. 
 
     a.  P(X > .75  | Y > .50)  
@@ -87,8 +91,7 @@ A.  Gross Living Area is not independent of Sales Price.  What is the conditiona
 
 Q.  Does splitting the training data in this fashion make them independent? 
 
-A.  No, independence describes whether there is a relation between X & Y.  Splitting the data doesn't
-    change the relationship, it just changes the extent of problem domain.
+-   No, independence describes whether there is a relation between X & Y.  Splitting the data doesn't change the      relationship, it just changes the extent of problem domain.
 
 
 ```{r, counts, eval=TRUE}
@@ -98,48 +101,46 @@ count(subset(AmesHomes, ( X > 1776.75 & Y <= 163000)))
 count(subset(AmesHomes, ( X > 1776.75 & Y > 163000)))
 ```
 
-Q.  In addition, make a table of counts as shown below.
+Q.  In addition, make a table of counts as shown below.  
     Let A be the new variable counting those observations above the 3d quartile for X, and let B be the 
-    new variable counting those observations above the 2d quartile for Y.
+    new variable counting those observations above the 2d quartile for Y.  
 
-A.  TABLE OF OBSERVATION COUNTS:
-                                        Y
-                      
-      |                | <=2nd quartile  | > 2nd quartile  | Total |
-      |----------------|-----------------|-----------------|-------|
-  X   |<= 3rd quartile |       682       |        413      | 1095  |
-      | > 3rd quartile |        50       |        315      |  365  |
-      |   Total        |       732       |        728      | 1460  |
+##TABLE OF OBSERVATION COUNTS:
 
-A + B represents 682 observations.
+|                | <=2nd quartile  | > 2nd quartile  | Total |
+|----------------|-----------------|-----------------|-------|
+|<= 3rd quartile |       682       |        413      | 1095  |
+| > 3rd quartile |        50       |        315      |  365  |
+|   Total        |       732       |        728      | 1460  |
+
+A + B represents 682 observations.  
 
 Q.  Does P(A|B)=P(A)P(B)? No  Check mathematically, and then 
 
-A.  P(A|B) = P(B and A) / P(B)
-           = (P(B) * P(A))/P(B)
-    P(A) = 365/1460 = .25
-    P(B) = 728/1460 = .50
-           = (.50 * .25)/.50
-           = .25
+-   P(A|B) = P(B and A) / P(B)  
+           = (P(B) * P(A))/P(B)  
+    P(A) = 365/1460 = .25  
+    P(B) = 728/1460 = .50  
+           = (.50 * .25)/.50  
+           = .25  
            
-    P(A) * P(B) = .25 * .5 = .125
+    P(A) * P(B) = .25 * .5 = .125  
 
-Q.  Evaluate by running a Chi Square test for association.
+Q.  Evaluate by running a Chi Square test for association. 
 
-A.  
 ```{r, chi-squared-test, eval=TRUE}
+#Negligible p-value
 #Provides strong evidence to suggest that X and Y have a dependent or have some association.
 chisq.test(matrix(c(682,413,50,315), ncol=2))
 ```
 
-#### Descriptive and Inferential Statistics
-Q.  Provide univariate descriptive statistics and appropriate plots for the training data set.
+# Descriptive and Inferential Statistics
 
-A.
-#Descriptive Statistics 
+
+## Descriptive Statistics 
 
 |    vars        |id |  n	 | mean  |   sd	 | median | min |  max  | range |skew|kurtosis| se  |
-|----------------|--:|----:|------:|------:|-------:|----:|------:|------:|---:|--------|----:|
+|----------------|--:|----:|------:|------:|-------:|----:|------:|------:|---:|--------|----:| 
 | MSSubClass     | 2 |1460 |    57 |    42 |     50 |  20 |   190 |   170 |  1 |       2|    1|
 | LotFrontage    | 4 |1201 |    70 |    24 |     69 |  21 |   313 |   292 |  2 |      17|    1|
 | LotArea        | 5 |1460 | 10517 |  9981 |   9478 |1300 |215245 |213945 | 12 |     202|  261|
@@ -179,7 +180,6 @@ A.
 | SalePrice      |81 |1460 |180921 | 79443 | 163000 |4900 |755000 |720100 |  2 |       6| 2079|
 
 
-#Prep for plots
 ```{r, data-adjustments, include=FALSE}
 # imput 81 GarageYrBlt nulls with YearBuilt
 AmesHomes$GarageYrBlt[is.na(AmesHomes$GarageYrBlt)] <- AmesHomes$YearBuilt[is.na(AmesHomes$GarageYrBlt)] 
@@ -239,7 +239,7 @@ AmesHomes$Fence[is.na(AmesHomes$Fence)] <- 'None'
 AmesHomes$MiscFeature[is.na(AmesHomes$MiscFeature)] <- 'None'
 
 # impute 5 nulls for MSZoning with 'None'
-AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'None'
+AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'I'
 
 # impute 2 nulls for Utilities with 'None'
 AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
@@ -291,268 +291,267 @@ AmesHomes$SaleType[is.na(AmesHomes$SaleType)] <- 'None'
 
 #describeData(AmesHomes)
 ```
+  
 
-#barplots for categorical data
-```{r, eval=TRUE, echo=FALSE}
-op <- par(oma=c(5,7,1,1))
-par(3,5)
+## Barplots & Catagorical Data 
 
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
 g03 <- ggplot(AmesHomes, aes(x = MSZoning)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Zoning Proportions")
+        ggtitle("Zoning Proportions") + theme(text = element_text(size = 5))
 AmesHomes$MSZoning <- factor(AmesHomes$MSZoning)
 
 g06 <- ggplot(AmesHomes, aes(x = Street)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Street Proportions") 
+        ggtitle("Street Proportions") + theme(text = element_text(size = 5))
 AmesHomes$Street <- factor(AmesHomes$Street) 
 
 g07 <- ggplot(AmesHomes, aes(x = Alley)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Alley Proportions")
+        ggtitle("Alley Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Alley <- factor(AmesHomes$Alley)
 
 g08 <- ggplot(AmesHomes, aes(x = LotShape)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("LotShape Proportions")
+        ggtitle("LotShape Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$LotShape <- factor(AmesHomes$LotShape)
 
 g09 <- ggplot(AmesHomes, aes(x = LandContour)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("LandContour Proportions")
+        ggtitle("LandContour Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$LandContour <- factor(AmesHomes$LandContour)
 
 g10 <- ggplot(AmesHomes, aes(x = Utilities)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Utilities Proportions")
+        ggtitle("Utilities Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Utilities <- factor(AmesHomes$Utilities)
 
 g11 <- ggplot(AmesHomes, aes(x = LotConfig)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("LotConfig Proportions")
+        ggtitle("LotConfig Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$LotConfig <- factor(AmesHomes$LotConfig)
 
 g12 <- ggplot(AmesHomes, aes(x = LandSlope)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("LandSlope Proportions")
+        ggtitle("LandSlope Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$LandSlope <- factor(AmesHomes$LandSlope)
 
 g13 <- ggplot(AmesHomes, aes(x = Neighborhood)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Neighborhood Proportions")
+        ggtitle("Neighborhood Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Neighborhood <- factor(AmesHomes$Neighborhood)
 
 g14 <- ggplot(AmesHomes, aes(x = Condition1)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Condition1 Proportions")
+        ggtitle("Condition1 Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Condition1 <- factor(AmesHomes$Condition1)
 
 g15 <- ggplot(AmesHomes, aes(x = Condition2)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Condition2 Proportions")
+        ggtitle("Condition2 Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Condition2 <- factor(AmesHomes$Condition2)
 
 g16 <- ggplot(AmesHomes, aes(x = BldgType)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BldgType Proportions")
+        ggtitle("BldgType Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BldgType <- factor(AmesHomes$BldgType)
 
 g17 <- ggplot(AmesHomes, aes(x = HouseStyle)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("HouseStyle Proportions")
+        ggtitle("HouseStyle Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$HouseStyle <- factor(AmesHomes$HouseStyle)
 
 g22 <- ggplot(AmesHomes, aes(x = RoofStyle)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("RoofStyle Proportions")
+        ggtitle("RoofStyle Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$RoofStyle <- factor(AmesHomes$RoofStyle)
 
 g23 <- ggplot(AmesHomes, aes(x = RoofMatl)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("RoofMatl Proportions")
+        ggtitle("RoofMatl Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$RoofMatl <- factor(AmesHomes$RoofMatl)
 
 g24 <- ggplot(AmesHomes, aes(x = Exterior1st)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Exterior1st Proportions")
+        ggtitle("Exterior1st Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Exterior1st <- factor(AmesHomes$Exterior1st)
 
 g25 <- ggplot(AmesHomes, aes(x = Exterior2nd)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Exterior2nd Proportions")
+        ggtitle("Exterior2nd Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Exterior2nd <- factor(AmesHomes$Exterior2nd)
 
 g26 <- ggplot(AmesHomes, aes(x = MasVnrType)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("MasVnrType Proportions")
+        ggtitle("MasVnrType Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$MasVnrType <- factor(AmesHomes$MasVnrType)
 
 g28 <- ggplot(AmesHomes, aes(x = ExterQual)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("ExterQual Proportions")
+        ggtitle("ExterQual Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$ExterQual <- factor(AmesHomes$ExterQual)
 
 g29 <- ggplot(AmesHomes, aes(x = ExterCond)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("ExterCond Proportions")
+        ggtitle("ExterCond Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$ExterCond <- factor(AmesHomes$ExterCond)
 
 g30 <- ggplot(AmesHomes, aes(x = Foundation)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Foundation Proportions")
+        ggtitle("Foundation Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Foundation <- factor(AmesHomes$Foundation)
 
 g31 <- ggplot(AmesHomes, aes(x = BsmtQual)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BsmtQual Proportions")
+        ggtitle("BsmtQual Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BsmtQual <- factor(AmesHomes$BsmtQual)
 
 g32 <- ggplot(AmesHomes, aes(x = BsmtCond)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BsmtCond Proportions")
+        ggtitle("BsmtCond Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BsmtCond <- factor(AmesHomes$BsmtCond)
 
 g33 <- ggplot(AmesHomes, aes(x = BsmtExposure)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BsmtExposure Proportions")
+        ggtitle("BsmtExposure Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BsmtExposure <- factor(AmesHomes$BsmtExposure)
 
 g34 <- ggplot(AmesHomes, aes(x = BsmtFinType1)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BsmtFinType1 Proportions")
+        ggtitle("BsmtFinType1 Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BsmtFinType1 <- factor(AmesHomes$BsmtFinType1)
 
 g36 <- ggplot(AmesHomes, aes(x = BsmtFinType2)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("BsmtFinType2 Proportions")
+        ggtitle("BsmtFinType2 Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$BsmtFinType2 <- factor(AmesHomes$BsmtFinType2)
 
 g40 <- ggplot(AmesHomes, aes(x = Heating)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Heating Proportions")
+        ggtitle("Heating Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Heating <- factor(AmesHomes$Heating)
 
 g41 <- ggplot(AmesHomes, aes(x = HeatingQC)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("HeatingQC Proportions")
+        ggtitle("HeatingQC Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$HeatingQC <- factor(AmesHomes$HeatingQC)
 
 g42 <- ggplot(AmesHomes, aes(x = CentralAir)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("CentralAir Proportions")
+        ggtitle("CentralAir Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$CentralAir <- factor(AmesHomes$CentralAir)
 
 g43 <- ggplot(AmesHomes, aes(x = Electrical)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Electrical Proportions")
+        ggtitle("Electrical Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Electrical <- factor(AmesHomes$Electrical)
 
 g54 <- ggplot(AmesHomes, aes(x = KitchenQual)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("KitchenQual Proportions")
+        ggtitle("KitchenQual Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$KitchenQual <- factor(AmesHomes$KitchenQual)
 
 g56 <- ggplot(AmesHomes, aes(x = Functional)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Functional Proportions")
+        ggtitle("Functional Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Functional <- factor(AmesHomes$Functional)
 
 g58 <- ggplot(AmesHomes, aes(x = FireplaceQu)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("FireplaceQu Proportions")
+        ggtitle("FireplaceQu Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$FireplaceQu <- factor(AmesHomes$FireplaceQu)
 
 g59 <- ggplot(AmesHomes, aes(x = GarageType)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("GarageType Proportions")
+        ggtitle("GarageType Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$GarageType <- factor(AmesHomes$GarageType)
 
 g61 <- ggplot(AmesHomes, aes(x = GarageFinish)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("GarageFinish Proportions")
+        ggtitle("GarageFinish Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$GarageFinish <- factor(AmesHomes$GarageFinish)
 
 g64 <- ggplot(AmesHomes, aes(x = GarageQual)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("GarageQual Proportions")
+        ggtitle("GarageQual Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$GarageQual <- factor(AmesHomes$GarageQual)
 
 g65 <- ggplot(AmesHomes, aes(x = GarageCond)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("GarageCond Proportions")
+        ggtitle("GarageCond Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$GarageCond <- factor(AmesHomes$GarageCond)
 
 g66 <- ggplot(AmesHomes, aes(x = PavedDrive)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("PavedDrive Proportions")
+        ggtitle("PavedDrive Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$PavedDrive <- factor(AmesHomes$PavedDrive)
 
 g73 <- ggplot(AmesHomes, aes(x = PoolQC)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("PoolQC Proportions")
+        ggtitle("PoolQC Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$PoolQC <- factor(AmesHomes$PoolQC)
 
 g74 <- ggplot(AmesHomes, aes(x = Fence)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("Fence Proportions")
+        ggtitle("Fence Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$Fence <- factor(AmesHomes$Fence)
 
 g75 <- ggplot(AmesHomes, aes(x = MiscFeature)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("MiscFeature Proportions")
+        ggtitle("MiscFeature Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$MiscFeature <- factor(AmesHomes$MiscFeature)
 
 g79 <- ggplot(AmesHomes, aes(x = SaleType)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("SaleType Proportions")
+        ggtitle("SaleType Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$SaleType <- factor(AmesHomes$SaleType)
 
 g80 <- ggplot(AmesHomes, aes(x = SaleCondition)) +  
         geom_bar(aes(y = (..count..)/sum(..count..))) + 
         scale_y_continuous(labels=percent) +
-        ggtitle("SaleCondition Proportions")
+        ggtitle("SaleCondition Proportions")+ theme(text = element_text(size = 5))
 AmesHomes$SaleCondition <- factor(AmesHomes$SaleCondition)
 
 grid.arrange(
@@ -568,7 +567,9 @@ grid.arrange(
 )  
 ```
 
-#histograms for ordinal data
+
+## Histograms for Ordinal Data 
+
 ```{r, fig.width = 9, fig.height = 7, echo = FALSE}
 #####################################################################
 # Make small histograms for each variable
@@ -688,59 +689,63 @@ hist(AmesHomes$YrSold, breaks = 100, col = 'yellow')
 hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
 ```
 
-Q.  Provide a scatterplot of X and Y.
+## Scatterplot 
 
-A.
-```{r, scatterplot, eval=TRUE}
-plot(X,Y)
+```{r, fig.width = 9, fig.height = 7, echo = FALSE}
+plot(AmesHomes$GrLivArea, AmesHomes$SalePrice)
 ```
 
-Provide a 95% CI for the difference in the mean of the variables.  
+Provide a 95% CI for the difference in the mean of the variables. 
 
 
-Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your analysis.
+Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your analysis. 
 
-Q.  Provide a 95% CI for the difference in the mean of the variables.  
+Q.  Provide a 95% CI for the difference in the mean of the variables. 
 
-A.  If 100 sample distibutions are taken from the population, 95 of them 
-    are likely to have prices within the confidence interval -183465.0 -175346.4
+-   If 100 sample distibutions are taken from the population, 95 of them 
+    are likely to have prices within the confidence interval -183465.0 -175346.4 
 ```{r,CI, eval=TRUE}
-t1 <- t.test( X, Y, paired = TRUE, conf.level = 0.95)
-t1
+t1 <- t.test( X, Y, paired = TRUE, conf.level = 0.95)  
+t1  
 ```
 
-Q.  Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the       correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your        analysis.
+Q.  Derive a correlation matrix for two of the quantitative variables you selected.  Test the hypothesis that the       correlation between these variables is 0 and provide a 99% confidence interval.  Discuss the meaning of your        analysis. 
 
 
-A.  If 100 sample distibutions are taken from the population, 99 of them 
-    are likely to have correlations within the confidence interval 0.6733974 0.7406408
+-   If 100 sample distibutions are taken from the population, 99 of them 
+    are likely to have correlations within the confidence interval 0.6733974 0.7406408.
+    The p-value is negligible, so reject the null hypothesis that there is no correlation 
 ```{r, correlation, eval=TRUE}
-c <- cor(X,Y)
+#shows strong positive correlation
+c <- cor(AmesHomes[,c("GrLivArea","SalePrice")])
 c
-r.test(1460,cor(X,Y),0)
-cor.test(X,Y,conf.level = 0.99)
+
+cor.test(AmesHomes$GrLivArea, AmesHomes$SalePrice,conf.level=.99)
 ```
 
-####Linear Algebra and Correlation
+#Linear Algebra and Correlation
 Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) 
 
-Q.  Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the   
+Q.  Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the 
     correlation matrix. 
 
-A.
 ```{r, precision, eval=TRUE}
 #invert the correlation for precision
-p <- solve(c) %*% c
+p <- solve(c) 
 p
+
 #precision * correlation
 p %*% c
 #correlation * precision
 c %*% p
 ```
 
-Q.  Conduct     principle components analysis (research this!)  and interpret.  Discuss.
+Q.  Conduct     principle components analysis (research this!)  and interpret.  Discuss. 
 
-A.  
+-   Comp 1 explains most of the variability in the data by a factor of 0.8543122 : 0.1456878 
+
+## Emperical vs. Theoretical Distributions
+
 ```{r, PCA, eval=TRUE}
 par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,2))
 # Pricipal Components Analysis
@@ -751,25 +756,67 @@ fit <- princomp(mydata, cor=TRUE)
 summary(fit) # print variance accounted for 
 loadings(fit) # pc loadings 
 plot(fit,type="lines") # scree plot 
-fit$scores # the principal components
+#fit$scores # the principal components
 biplot(fit)
 ```
-####Calculus-Based Probability & Statistics.  
+
+
+#Calculus-Based Probability & Statistics.  
 
 Many times, it makes sense to fit a closed form distribution to data.  
 
-Q.  For your variable that is skewed to the right, shift it so that the minimum value is above zero.  Then load the     MASS package and run fitdistr to fit an exponential probability density function.  
-    (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ).
+Q.  For your variable that is skewed to the right, shift it so that the minimum value is above zero.  Then load   
+    the MASS package and run fitdistr to fit an exponential probability density function.  
+    (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ). 
+    
+    Find the optimal value of lambda for this distribution, and then take 1000 samples from this exponential   
+    distribution using this value (e.g., rexp(1000, )).  Plot a histogram and compare it with a histogram of your     original variable. 
 
-A.  
 ```{r, fitdistr, eval=TRUE}
-f <- fitdistr(X, "exponential")
-library(fitdistrplus)
-#plotdist(X,"norm",para=list(mean=f$estimate[1],sd=f$estimate[2]))
+# fit exponential function to get optimal value of lambda for X
+fit <- fitdistr(X,"exponential")
+lambda <- fit$estimate
+
+# get 1000 element sampling distribution
+sample <- rexp(1000,lambda)
+
+# plot historgram of exponential function
+par(oma=c(3,3,0,0),mar=c(3,3,2,2),mfrow=c(2,1))
+hist(sample,prob=TRUE,breaks=25)
+curve(dexp(x,lambda),add=T)
+
+# plot histogram of original x
+hist(AmesHomes$GrLivArea, breaks=25)
 ```
-## https://rstudio-pubs-static.s3.amazonaws.com/26693_e1151035722942b2813c0063c6b220ae.html
-Find the optimal value of  for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, )). 
 
-Plot a histogram and compare it with a histogram of your original variable.   Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).   
+Q.  Using the exponential pdf, find the 5th and 95th percentiles using the cumulative 
+    distribution function (CDF).   Also generate a 95% confidence interval from the empirical data, assuming 
+    normality.  Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
+    
+    The exponential distribution is not a good fit for the right-skewed curve as evidenced by
+    the big difference in upperbound--95 percentile--data points comparing actual and fit data.
+    It appears that despite the skew, a normal distribution would still be a better model to 
+    fit the data which could then be adjusted by a transformation function, i.e. Box-Cox . . .
 
-Also generate a 95% confidence interval from the empirical data, assuming normality.  Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
+```{r, eval=TRUE}
+# lambda is an attribute of the exponential fit pdf
+# use qexp function for cdf
+# get the 5th & 95th pctile using cdf
+qexp(.05, rate = lambda)
+qexp(.95, rate = lambda)
+
+# generate a 95% confidence interval from emperical data 
+# X is AmesHomes$GrLivArea and fit contains its descriptive statistics
+# use this to calculate error and then Confidence Interval CI
+err <- qnorm(.95) * (fit$sd / sqrt(fit$n))
+
+CI <- data.frame(1 - err, 1 + err)
+colnames(CI) <- c("se-","se+")
+CI
+
+# Quantile gets emperical data from distribution using percentiles
+quantile(X, c(.05,.95))
+```
+
+# Model for AmesHousing
+http://rpubs.com/smkarr/236666

@@ -1,10 +1,11 @@
 ---
-title: 'DATA 605 Final Project'
+title: 'DATA 605 Final Project - Prediction Model'
 author: "Scott Karr"
 date: "Dec 23, 2016"
 output: 
   html_document: 
     theme: cerulean
+    toc: yes
 ---
 
 ```{r, eval=TRUE, echo=FALSE, include=FALSE}
@@ -36,36 +37,15 @@ AmesHomes <- read.csv(url, stringsAsFactors = FALSE)
 attach(AmesHomes)
 ```
 
-The data set we are exploring focuses on the binomial success or failure of whether the crime rate is above (1) or below (0) the median for a particular neighborhood.  There are 466 rows of data, each representing neighborhoods located in the Boston metropolitan area. For each neighborhood we are provided with 13 attributes that could potentially be used as predictor variables and one response variable ("target") that indicates whether or not the neighborhood does, in fact, have an above-median crime rate.  Our assignment is to try to predict whether or not a neighborhood would be more likely to a have an above-mian crime rate based on the 13 attributes provided in the data set.  A summary table for the data set is provided below.
+This data set explores the extent that 79 housing attributes in Ames Iowa explain regional housing prices.  There are 1460 rows of data, each representing a distinct attribute of a house recently sold in the Ames Iowa metropolitan area. These attributes can all potentially be used as predictor variables to the one response variable ("Sale Price") which indicates the price that the house actually sold for in that market.  Using a training data set from this superset of housing data, this exercise attempts to model and predict sales prices using test data from the same superset.  The predictions derived from test data and the model will ultimately be compared against actual sales data to determine the accuracy of the predictions.
 
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
 __--------------------------------------------------------------------------------------------------------------------------__
 
-# Part 2: Data Cleaning
+# Part 2: Data Preparation
+
+Meta-data was provided with the data sets for this exercise, including a data dictionary "data_description.txt".  In order to model attributes from complete cases, data was imputed for the attributes below.  The primary consideration in imputing data was the conversion of "NA" and "NaN" data to "None" and 0 respectively.  Doing so retains consistency with the original data for all cases without introducing skew and bias into the model caused by missing data.
+
+Note that introducing "None" for "NA" simply indicates the absence of that attribute, i.e. a measurement for a garage when none exists or a Masonry facade when the facade is not masonry.  Similarly, 0 is substituted for "NaN" when in the absence of a numeric value when the attribute is numeric, i.e. Lot Frontage in square feet when there is no Lot Frontage.
 
 ```{r, data-adjustments, include=FALSE}
 # imput 81 GarageYrBlt nulls with YearBuilt
@@ -126,13 +106,10 @@ AmesHomes$Fence[is.na(AmesHomes$Fence)] <- 'None'
 AmesHomes$MiscFeature[is.na(AmesHomes$MiscFeature)] <- 'None'
 
 # impute 5 nulls for MSZoning with 'None'
-AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'None'
+AmesHomes$MSZoning[is.na(AmesHomes$MSZoning)] <- 'C (all)'
 
-# impute 2 nulls for Utilities with 'None'
-AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
-
-# impute 2 nulls for Functional with 'None'
-AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+# impute 2 nulls for Utilities with 'AllPub'
+AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'AllPub'
 
 # impute 2 nulls for BsmtFullBath with 'None'
 AmesHomes$BsmtFullBath[is.na(AmesHomes$BsmtFullBath)] <- 0
@@ -141,16 +118,13 @@ AmesHomes$BsmtFullBath[is.na(AmesHomes$BsmtFullBath)] <- 0
 AmesHomes$BsmtHalfBath[is.na(AmesHomes$BsmtHalfBath)] <- 0
 
 # impute 1 nulls for Exterior1st with 'None'
-AmesHomes$Utilities[is.na(AmesHomes$Utilities)] <- 'None'
+AmesHomes$Exterior1st[is.na(AmesHomes$Exterior1st)] <- 'BrkFace'
 
 # impute 1 nulls for Exterior2nd with 'None'
-AmesHomes$Exterior1st[is.na(AmesHomes$Exterior1st)] <- 'None'
-
-# impute 1 nulls for Utilities with 'None'
-AmesHomes$Exterior2nd[is.na(AmesHomes$Exterior2nd)] <- 'None'
+AmesHomes$Exterior2nd[is.na(AmesHomes$Exterior2nd)] <- 'BrkFace'
 
 # impute 1 nulls for Functional with 'None'
-AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'None'
+AmesHomes$Functional[is.na(AmesHomes$Functional)] <- 'Typ'
 
 # impute 1 nulls for BsmtFinSF1 with 'None'
 AmesHomes$BsmtFinSF1[is.na(AmesHomes$BsmtFinSF1)] <- 0
@@ -183,13 +157,15 @@ AmesHomes$SaleType[is.na(AmesHomes$SaleType)] <- 'None'
 LotFrontage(4) 259, GarageYrBlt(60) 81, MasVnrArea(27) 8
 
 #### Factor Imputations
-Electrical(43) 1459, MasVnrType(26) 1452, BsmtQual(31) 1423, BsmtCond(32) 1423, BsmtFinType1(34) 1423, BsmtExposure(33) 1422
-BsmtFinType2(36) 1422, GarageType(59) 1379, GarageFinish(61) 1379, GarageQual(64) 1379, GarageCond(65) 1379, FireplaceQu(58) 770
-Fence(74) 281, Alley(7) 91, MiscFeature(75) 54, PoolQC(73) 7
+Electrical(43) 1, MasVnrType(26) 8, BsmtQual(31) 57, BsmtCond(32) 57, BsmtFinType1(34) 57, BsmtExposure(33) 58, BsmtFinType2(36) 58, GarageType(59) 81, GarageFinish(61) 81, GarageQual(64) 81, GarageCond(65) 81, FireplaceQu(58) 690
+Fence(74) 1179, Alley(7) 1369, MiscFeature(75) 1406, PoolQC(73) 1453
 
 \newpage
 
 #Descriptive Statistics 
+
+Significant skew and kurtosis exists for the attributes LotArea, LowQualFinSF, X3SsnPorch, ScreenPorch, PoolArea and MiscVal.
+These attributes are indicative of an uncommon occurance in the data set.  The model will be determinative of whether these attributes truly represent "outliers" or are uncommon but valuable to include in the model.
 
 |    vars        |id |  n	 | mean  |   sd	 | median | min |  max  | range |skew|kurtosis| se  |
 |----------------|--:|----:|------:|------:|-------:|----:|------:|------:|---:|--------|----:|
@@ -233,6 +209,8 @@ Fence(74) 281, Alley(7) 91, MiscFeature(75) 54, PoolQC(73) 7
 
 
 ## Barplots & Catagorical Data 
+Catagorical data is converted to factor data for inclusion in the model and represented below as proportional
+bar plots to indicate their relative relation to housing price.
 
 ```{r, fig.width = 9, fig.height = 7, echo = FALSE}
 g03 <- ggplot(AmesHomes, aes(x = MSZoning)) +  
@@ -508,6 +486,9 @@ grid.arrange(
 
 ## Histograms for Ordinal Data 
 
+Ordinal attributes are show as histograms.  Most of these attributes contain enough cases that even when significant skew occurs
+they are still useful to an ordinary least squares model.  The significance of each attribute will be tested by p-value, AIC and vif using the lm model in step 3.
+
 ```{r, fig.width = 9, fig.height = 7, echo = FALSE}
 # Make small histograms for each variable
 par(mfrow = c(5,3), oma = c(1, 1, 0, 0), mar=c(2, 3, 0, 1) + 2)
@@ -742,9 +723,9 @@ hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
 
 
 ```{r,include=FALSE, echo=FALSE}
-# c <- round(cor(AmesHomes[sapply(AmesHomes, is.numeric)], use = "complete"), 2)
-# c <- data.frame(c)
-# 
+c <- round(cor(AmesHomes[sapply(AmesHomes, is.numeric)], use = "complete"), 2)
+c <- data.frame(c)
+
 # tt <- ttheme_default(
 #         core=list(
 #             bg_params = list( col=NA), 
@@ -760,46 +741,20 @@ hist(AmesHomes$SalePrice, breaks = 100, col = 'yellow')
 # #browseVignettes("gridExtra")
 ```
 
-####Conclusion of Data Exploration
-During our data exploration efforts we identified variable(s) that can justifiably be ignored during model building, and we ranked correlation amongst various predictor variables that could be used to order inclusion one or more other variables during the model building process. Furthermore, we identified recurring variable values, require further investigation to determine whether or not additional action might be required to make use of those rows in our analysis. Finally, we identified three variables (. . . ) that are good candidates for transformation during the Data Preparation process. 
-
-__--------------------------------------------------------------------------------------------------------------------------__
-
-# Part 2 - Data Preparation
-
-Our Data Preparation efforts included an investigation of what appeared to have been an abnormally large number of records within the data set having shared values, proposing the conversion of two predictor variables to binary "0/1" factor variables, and simplifying the interpretation of the 'black' variable via mathematical transformation. While we also considered the possibility of transforming one or more of the predictor variables that have skewed distributions, we chose not to apply any such transforms prior to model building since normal distributions aren't necessarily required for logistical regression modeling. Transforms can be applied if the marginal model plots for a logistic regression model show evidence of deviance between the modeled data and the actual data, but aren't required prior to model building.
-
 __--------------------------------------------------------------------------------------------------------------------------__
 
 
 # Part 3 - Build Models
 
-## Model 1: Use the bestglm Function to Build a Model
+## Model 1: Use the stepAIC (both directions) function to Build a Model
 
 ```{r,eval=TRUE, include=FALSE}
 # Stepwise Regression
-fit <- lm(SalePrice ~ . -Id, data = AmesHomes)
-summary(fit)
-step <- stepAIC(fit, direction="both")
-step$anova # display results 
+lm.full <- formula(lm(SalePrice~.,AmesHomes))
+lm.null <- lm(SalePrice ~ 1, data = AmesHomes)
+model.aic.both <- step(lm.null, direction = "both", trace = 1, scope = lm.full)
 ```
 
-```{r,eval=TRUE, include=TRUE}
-# Final Model:
-fit <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContour + 
-    Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + 
-    Condition2 + BldgType + OverallQual + OverallCond + YearBuilt + 
-    YearRemodAdd + RoofStyle + RoofMatl + Exterior1st + MasVnrType + 
-    MasVnrArea + ExterQual + BsmtQual + BsmtCond + BsmtExposure + 
-    BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + 
-    BsmtFullBath + FullBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + 
-    TotRmsAbvGrd + Functional + Fireplaces + GarageCars + GarageArea + 
-    GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
-    PoolQC + Fence + MoSold + SaleCondition, data = AmesHomes
-)
-
-summary(fit)
-```
 
 __--------------------------------------------------------------------------------------------------------------------------__
 
@@ -883,13 +838,13 @@ AmesHomes.t$Fence[is.na(AmesHomes.t$Fence)] <- 'None'
 AmesHomes.t$MiscFeature[is.na(AmesHomes.t$MiscFeature)] <- 'None'
 
 # impute 5 nulls for MSZoning with 'None'
-AmesHomes.t$MSZoning[is.na(AmesHomes.t$MSZoning)] <- 'None'
+AmesHomes.t$MSZoning[is.na(AmesHomes.t$MSZoning)] <- 'C (all)'
 
 # impute 2 nulls for Utilities with 'None'
-AmesHomes.t$Utilities[is.na(AmesHomes.t$Utilities)] <- 'None'
+AmesHomes.t$Utilities[is.na(AmesHomes.t$Utilities)] <- 'AllPub'
 
 # impute 2 nulls for Functional with 'None'
-AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'None'
+AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'Typ'
 
 # impute 2 nulls for BsmtFullBath with 'None'
 AmesHomes.t$BsmtFullBath[is.na(AmesHomes.t$BsmtFullBath)] <- 0
@@ -898,16 +853,13 @@ AmesHomes.t$BsmtFullBath[is.na(AmesHomes.t$BsmtFullBath)] <- 0
 AmesHomes.t$BsmtHalfBath[is.na(AmesHomes.t$BsmtHalfBath)] <- 0
 
 # impute 1 nulls for Exterior1st with 'None'
-AmesHomes.t$Utilities[is.na(AmesHomes.t$Utilities)] <- 'None'
+AmesHomes.t$Exterior1st[is.na(AmesHomes.t$Exterior1st)] <- 'BrkFace'
 
 # impute 1 nulls for Exterior2nd with 'None'
-AmesHomes.t$Exterior1st[is.na(AmesHomes.t$Exterior1st)] <- 'None'
-
-# impute 1 nulls for Utilities with 'None'
-AmesHomes.t$Exterior2nd[is.na(AmesHomes.t$Exterior2nd)] <- 'None'
+AmesHomes.t$Exterior2nd[is.na(AmesHomes.t$Exterior2nd)] <- 'BrkFace'
 
 # impute 1 nulls for Functional with 'None'
-AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'None'
+AmesHomes.t$Functional[is.na(AmesHomes.t$Functional)] <- 'Typ'
 
 # impute 1 nulls for BsmtFinSF1 with 'None'
 AmesHomes.t$BsmtFinSF1[is.na(AmesHomes.t$BsmtFinSF1)] <- 0
@@ -928,7 +880,9 @@ AmesHomes.t$GarageCars[is.na(AmesHomes.t$GarageCars)] <- 0
 AmesHomes.t$GarageArea[is.na(AmesHomes.t$GarageArea)] <- 0
 
 # impute 1 nulls for TotalBsmtSF with 'None'
-AmesHomes.t$SaleType[is.na(AmesHomes.t$SaleType)] <- 'None'
+AmesHomes.t$KitchenQual[is.na(AmesHomes.t$KitchenQual)] <- 'Gd'
+
+# impute 1 null for KitchQual with 'Gd'
 # Show Descriptive Statistics
 # des <- describeBy(AmesHomes.t)[,-c(6,7)]
 # print(des, digits=0)
@@ -1327,8 +1281,8 @@ hist(AmesHomes.t$YrSold, breaks = 100, col = 'yellow')
 ```
 
 ```{r,include=FALSE, echo=FALSE}
-# c <- round(cor(AmesHomes.t[sapply(AmesHomes.t, is.numeric)], use = "complete"), 2)
-# c <- data.frame(c)
+#   c <- round(cor(AmesHomes[sapply(AmesHomes, is.numeric)], use = "complete"), 2)
+#   c <- data.frame(c)
 # 
 # tt <- ttheme_default(
 #         core=list(
@@ -1339,15 +1293,21 @@ hist(AmesHomes.t$YrSold, breaks = 100, col = 'yellow')
 #           fg_params = list(parse=TRUE,rot=90,fontface=3L)
 #         )
 #       )
-# 
+# # 
 # #displays too big in markdown, just print image
 # grid.table(c,theme=tt)
 # #browseVignettes("gridExtra")
 ```
 
+__--------------------------------------------------------------------------------------------------------------------------__
+
+
+# Part 5 - Output file
+https://raw.githubusercontent.com/scottkarr/IS605-scottkarr-final/master/predictions.csv
+
 ```{r, eval=TRUE, include=FALSE}
-predict(fit, data=AmesHomes.t)
-predictions <- fit$fitted.values
-predictions_df <- data.frame(predictions)
-write.csv(predictions_df, file = "predictions.csv")
+f <- predict(model.aic.both, newdata=AmesHomes.t)
+prediction_df <- data.frame(AmesHomes.t$Id, f)
+colnames(prediction_df) <- c('Id','SalePrice')
+write.csv(prediction_df, file = "predictions.csv")
 ```
